@@ -504,6 +504,10 @@ export class GameServer {
       // arena (Ashen Coliseum 1v1 queue)
       case 'arena_queue': sim.arenaQueueJoin(pid); break;
       case 'arena_leave': sim.arenaQueueLeave(pid); break;
+      // Ravenrift (5v5 capture-the-flag queue)
+      case 'bg_queue': sim.bgQueueJoin(pid); break;
+      case 'bg_leave': sim.bgQueueLeave(pid); break;
+      case 'dev_bg_start': if (process.env.ALLOW_DEV_COMMANDS === '1') sim.devStartBg(); break;
       // dev/ops commands, only when ALLOW_DEV_COMMANDS=1 (never in production)
       case 'dev_level': {
         if (process.env.ALLOW_DEV_COMMANDS === '1' && typeof msg.level === 'number') {
@@ -699,6 +703,7 @@ export class GameServer {
     maybe('trade', this.tradeWire(session.pid));
     maybe('duel', this.duelWire(session.pid));
     maybe('arena', this.sim.arenaInfoFor(session.pid));
+    maybe('bg', this.sim.bgInfoFor(session.pid));
     return extra === '' ? json : json.slice(0, -1) + extra + '}';
   }
 

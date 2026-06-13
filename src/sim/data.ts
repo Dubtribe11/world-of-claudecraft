@@ -166,7 +166,7 @@ export function arenaOrigin(slot: number): { x: number; z: number } {
 }
 
 export function isArenaPos(x: number): boolean {
-  return x >= ARENA_X_MIN;
+  return x >= ARENA_X_MIN && x < BG_X_MIN;
 }
 
 // Nearest arena instance origin to a far-off position, matched by z-band (the
@@ -179,6 +179,36 @@ export function arenaOriginAt(z: number): { x: number; z: number; slot: number }
     if (d < bestD) { bestD = d; best = i; }
   }
   const o = arenaOrigin(best);
+  return { x: o.x, z: o.z, slot: best };
+}
+
+// ---------------------------------------------------------------------------
+// Ravenrift — the 5v5 ranked capture-the-flag battleground. Its match instances
+// get their own far-off flat-ground x-band beyond the arena band; slots stack
+// along z. The band split keeps BG positions from being read as arena/dungeon.
+// ---------------------------------------------------------------------------
+
+export const BG_X = 4200; // battleground instances share this x
+export const BG_X_MIN = 3800; // x at/after this = a battleground instance
+export const BG_SLOT_COUNT = 3; // concurrent 5v5 matches the world can host
+const BG_Z0 = -1500;
+const BG_SLOT_SPACING = 300; // > the field footprint (~120yd) so slots never overlap
+
+export function battlegroundOrigin(slot: number): { x: number; z: number } {
+  return { x: BG_X, z: BG_Z0 + slot * BG_SLOT_SPACING };
+}
+
+export function isBgPos(x: number): boolean {
+  return x >= BG_X_MIN;
+}
+
+export function bgOriginAt(z: number): { x: number; z: number; slot: number } {
+  let best = 0, bestD = Infinity;
+  for (let i = 0; i < BG_SLOT_COUNT; i++) {
+    const d = Math.abs(z - battlegroundOrigin(i).z);
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  const o = battlegroundOrigin(best);
   return { x: o.x, z: o.z, slot: best };
 }
 
