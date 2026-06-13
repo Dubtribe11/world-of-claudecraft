@@ -5,7 +5,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import {
   ensureSchema, pool, createAccount, findAccount, touchLogin, saveToken, accountForToken,
   listCharacters, getCharacter, createCharacter, deleteCharacter, closeOrphanSessions,
-  pruneChatLogs, topArenaRatings,
+  pruneChatLogs, topArenaRatings, topSquadRatings,
 } from './db';
 import { hashPassword, verifyPassword, newToken, validUsername, validPassword, validCharName } from './auth';
 import { json, readBody } from './http_util';
@@ -177,6 +177,10 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
     if (req.method === 'GET' && url === '/api/arena/leaderboard') {
       // public all-time Ashen Coliseum ladder (top rated characters)
       return json(res, 200, { leaders: await topArenaRatings(20) });
+    }
+    if (req.method === 'GET' && url === '/api/squad/leaderboard') {
+      // public all-time Ravenrift 5v5 ladder
+      return json(res, 200, { leaders: await topSquadRatings(20) });
     }
     json(res, 404, { error: 'unknown endpoint' });
   } catch (err: any) {

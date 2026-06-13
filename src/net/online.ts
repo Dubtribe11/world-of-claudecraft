@@ -6,7 +6,7 @@ import {
   Entity, EquipSlot, InvSlot, MoveInput, PlayerClass, QuestProgress, QuestState, SimEvent,
   emptyMoveInput,
 } from '../sim/types';
-import type { ArenaInfo, DuelInfo, IWorld, PartyInfo, TradeInfo } from '../world_api';
+import type { ArenaInfo, BgInfo, DuelInfo, IWorld, PartyInfo, TradeInfo } from '../world_api';
 
 // ---------------------------------------------------------------------------
 // REST
@@ -128,6 +128,7 @@ export class ClientWorld implements IWorld {
   tradeInfo: TradeInfo | null = null;
   duelInfo: DuelInfo | null = null;
   arenaInfo: ArenaInfo | null = null;
+  bgInfo: BgInfo | null = null;
   // snapshot interpolation
   lastSnapAt = 0;
   snapInterval = 50; // ms, adapts to measured cadence
@@ -380,6 +381,7 @@ export class ClientWorld implements IWorld {
       if (s.trade !== undefined) this.tradeInfo = s.trade;
       if (s.duel !== undefined) this.duelInfo = s.duel;
       if (s.arena !== undefined) this.arenaInfo = s.arena;
+      if (s.bg !== undefined) this.bgInfo = s.bg;
       // camera follows server-side facing changes when not mouselooking
       if (prevSelfFacing !== undefined && this.mouselookFacing === null) {
         let d = e.facing - prevSelfFacing;
@@ -528,6 +530,12 @@ export class ClientWorld implements IWorld {
   }
   arenaQueueLeave(): void {
     this.cmd({ cmd: 'arena_leave' });
+  }
+  bgQueueJoin(): void {
+    this.cmd({ cmd: 'bg_queue' });
+  }
+  bgQueueLeave(): void {
+    this.cmd({ cmd: 'bg_leave' });
   }
   enterDungeon(dungeonId: string): void {
     this.cmd({ cmd: 'enter_dungeon', dungeon: dungeonId });
