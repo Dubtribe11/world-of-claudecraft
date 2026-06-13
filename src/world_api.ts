@@ -41,6 +41,33 @@ export interface DuelInfo {
   state: 'countdown' | 'active';
 }
 
+export interface ArenaLadderEntry {
+  pid: number;
+  name: string;
+  cls: PlayerClass;
+  rating: number;
+  wins: number;
+  losses: number;
+}
+
+export interface ArenaInfo {
+  rating: number;
+  wins: number;
+  losses: number;
+  queued: boolean;
+  queueSize: number;
+  // present only while in a match
+  match: {
+    state: 'countdown' | 'active';
+    oppName: string;
+    oppClass: PlayerClass;
+    oppLevel: number;
+    oppPid: number;
+  } | null;
+  // live standings of rated players currently online, best first
+  ladder: ArenaLadderEntry[];
+}
+
 // The surface the renderer + HUD need from a game world. The offline `Sim`
 // satisfies this structurally; the online `ClientWorld` implements it by
 // mirroring server snapshots and sending commands over the socket.
@@ -80,6 +107,7 @@ export interface IWorld {
   partyInfo: PartyInfo | null;
   tradeInfo: TradeInfo | null;
   duelInfo: DuelInfo | null;
+  arenaInfo: ArenaInfo | null;
   partyInvite(targetPid: number): void;
   partyAccept(): void;
   partyDecline(): void;
@@ -93,6 +121,8 @@ export interface IWorld {
   duelRequest(targetPid: number): void;
   duelAccept(): void;
   duelDecline(): void;
+  arenaQueueJoin(): void;
+  arenaQueueLeave(): void;
   enterDungeon(dungeonId: string): void;
   leaveDungeon(): void;
 }

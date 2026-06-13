@@ -501,6 +501,9 @@ export class GameServer {
       case 'duel_req': if (typeof msg.id === 'number') sim.duelRequest(msg.id, pid); break;
       case 'duel_accept': sim.duelAccept(pid); break;
       case 'duel_decline': sim.duelDecline(pid); break;
+      // arena (Ashen Coliseum 1v1 queue)
+      case 'arena_queue': sim.arenaQueueJoin(pid); break;
+      case 'arena_leave': sim.arenaQueueLeave(pid); break;
       // dev/ops commands, only when ALLOW_DEV_COMMANDS=1 (never in production)
       case 'dev_level': {
         if (process.env.ALLOW_DEV_COMMANDS === '1' && typeof msg.level === 'number') {
@@ -695,6 +698,7 @@ export class GameServer {
     maybe('party', this.partyWire(session.pid));
     maybe('trade', this.tradeWire(session.pid));
     maybe('duel', this.duelWire(session.pid));
+    maybe('arena', this.sim.arenaInfoFor(session.pid));
     return extra === '' ? json : json.slice(0, -1) + extra + '}';
   }
 

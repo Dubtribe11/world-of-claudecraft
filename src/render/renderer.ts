@@ -4,7 +4,7 @@ import type { IWorld } from '../world_api';
 import { groundHeight, WATER_LEVEL, zoneBiomeAt } from '../sim/world';
 import {
   MOBS, ABILITIES, DUNGEON_X_THRESHOLD, DUNGEON_LIST, QUESTS,
-  instanceOrigin, INSTANCE_SLOT_COUNT,
+  instanceOrigin, INSTANCE_SLOT_COUNT, ARENA_SLOT_COUNT, arenaOrigin, isArenaPos,
 } from '../sim/data';
 import type { BiomeId } from '../sim/types';
 import { AnimState, CharacterVisual, createCharacterVisual } from './characters';
@@ -584,7 +584,19 @@ export class Renderer {
 
   private updateAmbience(px: number, camY: number, dt: number): void {
     const inside = px > DUNGEON_X_THRESHOLD;
-    if (inside) {
+    if (inside && isArenaPos(px)) {
+      // build the Ashen Coliseum copy the player was matched into
+      const pz = this.sim.player.pos.z;
+      for (let i = 0; i < ARENA_SLOT_COUNT; i++) {
+        const key = `arena:${i}`;
+        if (this.builtInteriors.has(key)) continue;
+        const o = arenaOrigin(i);
+        if (Math.abs(px - o.x) < 200 && Math.abs(pz - o.z) < 120) {
+          this.builtInteriors.add(key);
+          this.buildInterior('arena', o.x, o.z);
+        }
+      }
+    } else if (inside) {
       // build the interior copy the player is standing in
       for (const dungeon of DUNGEON_LIST) {
         for (let i = 0; i < INSTANCE_SLOT_COUNT; i++) {

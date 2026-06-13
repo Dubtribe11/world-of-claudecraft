@@ -6,7 +6,7 @@
 export interface InputCallbacks {
   onTab(): void;
   onAbility(slot: number): void;
-  onUiKey(key: 'interact' | 'bags' | 'char' | 'spellbook' | 'questlog' | 'map' | 'nameplates' | 'escape' | 'chat' | 'meters'): void;
+  onUiKey(key: 'interact' | 'bags' | 'char' | 'spellbook' | 'questlog' | 'map' | 'nameplates' | 'escape' | 'chat' | 'meters' | 'arena'): void;
   onClickPick(x: number, y: number, button: number): void;
 }
 
@@ -61,6 +61,7 @@ export class Input {
       case 'KeyM': this.cb.onUiKey('map'); return;
       case 'KeyV': this.cb.onUiKey('nameplates'); return;
       case 'KeyN': this.cb.onUiKey('meters'); return;
+      case 'KeyG': this.cb.onUiKey('arena'); return;
       case 'Enter': case 'NumpadEnter': this.cb.onUiKey('chat'); return;
       case 'Escape': this.cb.onUiKey('escape'); return;
       case 'NumLock': case 'KeyR': this.autorun = !this.autorun; return;
