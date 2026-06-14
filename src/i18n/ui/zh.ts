@@ -115,6 +115,39 @@ export const ZH: Record<string, string> = {
   // ---- Banners ------------------------------------------------------------
   'banner.level': '{level} 级！',
 
+  // ---- XP bar -------------------------------------------------------------
+  'xp.max': '满级',
+  'xp.bar': '{xp} / {need} 经验 ({pct}%)',
+
+  // ---- Combat log + floating combat text ---------------------------------
+  'fct.miss': '未命中',
+  'fct.dodge': '闪躲',
+  'combat.attackWord': '攻击',
+  'combat.something': '某个东西',
+  'combat.you': '你',
+  'combat.critSuffix': '（暴击）',
+  'combat.yourMiss': '你的{ability}未命中{target}。',
+  'combat.yourDodge': '你的{ability}被{target}闪躲了。',
+  'combat.yourHit': '你的{ability}击中{target}，造成 {amount} 点伤害{crit}。',
+  'combat.hitsYou': '{source}击中你，造成 {amount} 点伤害{crit}。',
+  'combat.dies': '{name}死亡了。',
+  'combat.yourHeal': '你的{ability}为{target}恢复了 {amount} 点生命值{crit}。',
+  'combat.duelResult': '{winner}在决斗中击败了{loser}。',
+  'combat.arenaDraw': '与{opp}的竞技场对战以平局告终。评分 {rating}（{sign}{delta}）。',
+  'combat.arenaWin': '你在灰烬竞技场击败了{opp}。评分 {rating}（{sign}{delta}）。',
+  'combat.arenaLoss': '{opp}在灰烬竞技场击败了你。评分 {rating}（{sign}{delta}）。',
+  'combat.auraGain': '你获得了{aura}。',
+  'combat.auraFade': '{aura}从你身上消退。',
+  'combat.auraAfflict': '{target}受到了{aura}的影响。',
+
+  // ---- Social prompts -----------------------------------------------------
+  'prompt.invite.text': '<b>{name}</b> 邀请你加入他们的队伍。',
+  'prompt.invite.btn': '加入队伍',
+  'prompt.trade.text': '<b>{name}</b> 想要与你交易。',
+  'prompt.trade.btn': '打开交易',
+  'prompt.duel.text': '<b>{name}</b> 向你发起了决斗！',
+  'prompt.duel.btn': '接受决斗',
+
   // ---- Arena (Ashen Coliseum) --------------------------------------------
   'arena.queued': '已加入灰烬竞技场队列（第 {position} 位）。',
   'arena.leftQueue': '你离开了灰烬竞技场队列。',
@@ -128,6 +161,8 @@ export const ZH: Record<string, string> = {
   'arena.queueNote': '你将与在线评分最接近的挑战者配对，随后被传送至竞技场。获胜即可晋升；率先认输者（剩 1 点生命值）落败。结束后你将回到加入队列时的位置。',
   'arena.ladderAllTime': '排行榜 — 历史总榜',
   'arena.ladderOnline': '排行榜 — 在线',
+  'arena.record': '评分 &middot; <b>{wins}</b> 胜 / <i>{losses}</i> 负',
+  'arena.vsSub': '{level} 级 {cls}',
   'arena.leaveQueue': '离开队列',
   'arena.enterQueue': '加入队列',
   'arena.steel': '做好准备……',
@@ -152,10 +187,14 @@ export const ZH: Record<string, string> = {
   'quest.abandon': '放弃任务',
   'quest.suggestedPlayers': '建议人数：{n}',
   'quest.completeTag': '（已完成）',
+  'quest.tracker.header': '任务',
   'quest.log.title': '任务日志',
   'quest.log.summary': '{active} 个进行中 · {done} 个已完成',
   'quest.log.empty': '没有进行中的任务。',
   'quest.log.emptyHint': '寻找头顶标有 <span class="gold">!</span> 的镇民来接取任务。',
+  'quest.reward.xp': '{xp} 点经验值',
+  'gossip.browseGoods': '让我看看你的商品。',
+  'gossip.showMarket': '带我看看世界市场。',
 
   // ---- Loot ---------------------------------------------------------------
   'loot.takeAll': '全部拾取',
@@ -163,6 +202,8 @@ export const ZH: Record<string, string> = {
   // ---- Vendor -------------------------------------------------------------
   'vendor.goods': '{name} — 商品',
   'vendor.sellHint': '在此窗口打开时，点击背包中的物品即可出售。',
+  'vendor.clickBuy': '点击购买',
+  'vendor.clickSell': '点击以 {money} 出售',
 
   // ---- World Market -------------------------------------------------------
   'market.title': '世界市场',
@@ -173,23 +214,44 @@ export const ZH: Record<string, string> = {
   'market.browse.empty': '上前与商人交易。',
   'market.sell.empty': '市场一片冷清。成为第一个——在“出售”页中挂出商品吧。',
   'market.browse.note': '由全境冒险者挂出的商品。点击“购买”即可整组买下。',
-  'market.sell.note': '从背包中挂出商品。物品售出时，商人抽取 {cut}% 的佣金，从你的收益中扣除。',
+  'market.sell.note': '从背包中挂出商品。物品售出时，商人抽取 {cut}% 的佣金。你已使用 {used}/{max} 个挂售栏位。',
   'market.sell.pickHint': '点击背包中的物品，选择要出售的东西。',
   'market.list': '挂上世界市场',
   'market.collect.empty': '没有待领取的东西。售出所得与过期下架的物品会汇集于此。',
   'market.collect.note': '商人为你保管的收益与退回的商品。',
   'market.collectAll': '全部领取',
+  'market.each': '每个 {money}',
+  'market.merchantStock': '商人的存货',
+  'market.buy': '购买',
+  'market.reclaim': '取回',
+  'market.quantity': '数量',
+  'market.ofN': '共 {n}',
+  'market.priceEach': '单价',
+  'coin.g': '金',
+  'coin.s': '银',
+  'coin.c': '铜',
   'market.err.minPrice': '定价至少需为 1 铜币。',
   'market.err.noQuestItems': '商人不会代售任务物品。',
 
   // ---- Bags ---------------------------------------------------------------
   'bags.title': '背包',
   'bags.empty': '你的背包是空的。',
+  'market.saleProceeds': '售出所得',
+  'bag.tip.trade': '点击放入交易',
+  'bag.tip.questNoMarket': '无法在市场上出售',
+  'bag.tip.market': '点击挂上市场',
+  'bag.tip.sell': '点击出售',
+  'bag.tip.equip': '点击装备',
+  'bag.tip.consume': '点击使用',
 
   // ---- Spellbook ----------------------------------------------------------
   'spellbook.title': '法术书',
   'spellbook.trainable': '可在 {level} 级学习',
   'spellbook.trainableTip': '你将在 {level} 级学会此技能。',
+  'spell.channeled': '引导',
+  'spell.castS': '{s} 秒施法',
+  'spell.cooldownS': '{s} 秒冷却',
+  'quest.returnTo': '返回交给 {name}',
 
   // ---- Character sheet ----------------------------------------------------
   'char.levelClass': '{level} 级{cls}',
@@ -212,6 +274,38 @@ export const ZH: Record<string, string> = {
   // ---- Tooltips -----------------------------------------------------------
   'tt.classes': '职业：{classes}',
   'tt.secondsRemaining': '剩余 {n} 秒',
+  'tt.damageLine': '{min} - {max} 点伤害&nbsp;&nbsp;速度 {speed}',
+  'tt.dpsLine': '（每秒 {dps} 点伤害）',
+  'tt.dagger': '匕首',
+  'tt.armorLine': '{v} 点护甲',
+  'tt.statPlus': '+{v} {stat}',
+  'tt.useFood': '使用：在 18 秒内恢复 {hp} 点生命值。进食时必须保持坐姿。',
+  'tt.useDrink': '使用：在 18 秒内恢复 {mana} 点法力值。饮用时必须保持坐姿。',
+  'tt.questItem': '任务物品',
+  'tt.sellPrice': '出售价格：{money}',
+  'tt.rank': '等级 {n}',
+  'tt.cost': '{cost} 点{res}',
+  'tt.rangeYd': '{range} 码射程',
+  'tt.channeled': '引导（{sec} 秒）',
+  'tt.castSec': '{sec} 秒施法',
+  'tt.instant': '瞬发',
+  'tt.cooldown': '{sec} 秒冷却',
+
+  // ---- Stat / resource words ---------------------------------------------
+  'stat.str': '力量',
+  'stat.agi': '敏捷',
+  'stat.sta': '耐力',
+  'stat.int': '智力',
+  'stat.spi': '精神',
+  'res.rage': '怒气',
+  'res.energy': '能量',
+  'res.mana': '法力',
+
+  // ---- Cast bar / target frame transient states --------------------------
+  'cast.eating': '进食中……',
+  'cast.drinking': '饮水中……',
+  'cast.eatingDrinking': '进食并饮水中……',
+  'target.dead': '死亡',
 
   // ---- Target frame -------------------------------------------------------
   'target.elite': '精英',
@@ -234,12 +328,17 @@ export const ZH: Record<string, string> = {
   'prompt.duelRequest': '{name}向你发起决斗。',
 
   // ---- Trade --------------------------------------------------------------
+  'trade.with': '与{name}交易',
   'trade.yourOffer': '你的出价',
   'trade.theirOffer': '{name}的出价',
   'trade.accept': '接受交易',
   'trade.waiting': '等待中……',
   'trade.hint': '点击已放入的物品可将其取回。双方都必须按下“接受交易”。',
   'trade.cancel': '取消',
+  'trade.addHint': '点击背包中的物品以放入',
+  'trade.nothingYet': '尚未放入任何物品',
+  'trade.moneyLabel': '金钱：',
+  'trade.copperWord': '铜币',
 
   // ---- Options / settings menu -------------------------------------------
   'menu.game.title': '游戏菜单',
@@ -293,6 +392,10 @@ export const ZH: Record<string, string> = {
   'keybind.act.chat': '打开聊天',
   'keybind.act.attack': '攻击',
   'keybind.act.actionbar': '动作条 {n}',
+  'keybind.cat.Movement': '移动',
+  'keybind.cat.Targeting': '选取目标',
+  'keybind.cat.Interface': '界面',
+  'keybind.cat.Action Bar': '动作条',
 
   // ---- Interaction feedback ----------------------------------------------
   'interact.tooFar': '距离太远了。',
@@ -300,4 +403,7 @@ export const ZH: Record<string, string> = {
 
   // ---- NPC greeting -------------------------------------------------------
   'npc.greetingDefault': '你好。',
+
+  // ---- Dungeon portals (nameplates) --------------------------------------
+  'dungeon.exit': '{name}出口',
 };

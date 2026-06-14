@@ -118,6 +118,39 @@ export const EN: Record<string, string> = {
   // ---- Banners ------------------------------------------------------------
   'banner.level': 'Level {level}!',
 
+  // ---- XP bar -------------------------------------------------------------
+  'xp.max': 'MAX LEVEL',
+  'xp.bar': '{xp} / {need} XP ({pct}%)',
+
+  // ---- Combat log + floating combat text ---------------------------------
+  'fct.miss': 'Miss',
+  'fct.dodge': 'Dodge',
+  'combat.attackWord': 'attack',
+  'combat.something': 'Something',
+  'combat.you': 'you',
+  'combat.critSuffix': ' (Critical)',
+  'combat.yourMiss': 'Your {ability} misses {target}.',
+  'combat.yourDodge': 'Your {ability} is dodged by {target}.',
+  'combat.yourHit': 'Your {ability} hits {target} for {amount}{crit}.',
+  'combat.hitsYou': '{source} hits you for {amount}{crit}.',
+  'combat.dies': '{name} dies.',
+  'combat.yourHeal': 'Your {ability} heals {target} for {amount}{crit}.',
+  'combat.duelResult': '{winner} has defeated {loser} in a duel.',
+  'combat.arenaDraw': 'Arena bout vs {opp} ended in a draw. Rating {rating} ({sign}{delta}).',
+  'combat.arenaWin': 'You defeated {opp} in the Ashen Coliseum. Rating {rating} ({sign}{delta}).',
+  'combat.arenaLoss': '{opp} bested you in the Ashen Coliseum. Rating {rating} ({sign}{delta}).',
+  'combat.auraGain': 'You gain {aura}.',
+  'combat.auraFade': '{aura} fades from you.',
+  'combat.auraAfflict': '{target} is afflicted by {aura}.',
+
+  // ---- Social prompts -----------------------------------------------------
+  'prompt.invite.text': '<b>{name}</b> invites you to join their party.',
+  'prompt.invite.btn': 'Join Party',
+  'prompt.trade.text': '<b>{name}</b> wants to trade with you.',
+  'prompt.trade.btn': 'Open Trade',
+  'prompt.duel.text': '<b>{name}</b> has challenged you to a duel!',
+  'prompt.duel.btn': 'Accept Duel',
+
   // ---- Arena (Ashen Coliseum) --------------------------------------------
   'arena.queued': 'Queued for the Ashen Coliseum (position {position}).',
   'arena.leftQueue': 'You leave the Ashen Coliseum queue.',
@@ -131,6 +164,8 @@ export const EN: Record<string, string> = {
   'arena.queueNote': 'You will be matched with the nearest-rated challenger online, then teleported to the sands. Win to climb; first to yield (1 health) loses. You return exactly where you queued.',
   'arena.ladderAllTime': 'Ladder — All-Time',
   'arena.ladderOnline': 'Ladder — Online',
+  'arena.record': 'Rating &middot; <b>{wins}</b> wins / <i>{losses}</i> losses',
+  'arena.vsSub': 'Lv {level} {cls}',
   'arena.leaveQueue': 'Leave Queue',
   'arena.enterQueue': 'Enter the Queue',
   'arena.steel': 'Steel yourself…',
@@ -155,10 +190,14 @@ export const EN: Record<string, string> = {
   'quest.abandon': 'Abandon Quest',
   'quest.suggestedPlayers': 'Suggested players: {n}',
   'quest.completeTag': '(Complete)',
+  'quest.tracker.header': 'Quests',
   'quest.log.title': 'Quest Log',
   'quest.log.summary': '{active} active · {done} completed',
   'quest.log.empty': 'No active quests.',
   'quest.log.emptyHint': 'Seek out townsfolk marked with <span class="gold">!</span> to find work.',
+  'quest.reward.xp': '{xp} experience',
+  'gossip.browseGoods': 'Let me browse your goods.',
+  'gossip.showMarket': 'Show me the World Market.',
 
   // ---- Loot ---------------------------------------------------------------
   'loot.takeAll': 'Take All',
@@ -166,6 +205,8 @@ export const EN: Record<string, string> = {
   // ---- Vendor -------------------------------------------------------------
   'vendor.goods': '{name} — Goods',
   'vendor.sellHint': 'Click an item in your bags to sell it while this window is open.',
+  'vendor.clickBuy': 'Click to buy',
+  'vendor.clickSell': 'Click to sell for {money}',
 
   // ---- World Market -------------------------------------------------------
   'market.title': 'The World Market',
@@ -176,23 +217,44 @@ export const EN: Record<string, string> = {
   'market.browse.empty': 'Step up to the Merchant to deal.',
   'market.sell.empty': 'The market is quiet. Be the first — list something on the Sell tab.',
   'market.browse.note': 'Goods listed by adventurers across the realm. Click Buy to purchase a stack outright.',
-  'market.sell.note': 'List goods from your bags. The Merchant takes a {cut}% cut when an item sells, deducted from your payout.',
+  'market.sell.note': 'List goods from your bags. The Merchant takes a {cut}% cut when an item sells. You are using {used}/{max} listing slots.',
   'market.sell.pickHint': 'Click an item in your bags to choose what to sell.',
   'market.list': 'List on the World Market',
   'market.collect.empty': 'Nothing waiting. Sale proceeds and expired listings collect here.',
   'market.collect.note': 'Earnings and returned goods the Merchant is holding for you.',
   'market.collectAll': 'Collect All',
+  'market.each': '{money} each',
+  'market.merchantStock': "Merchant's stock",
+  'market.buy': 'Buy',
+  'market.reclaim': 'Reclaim',
+  'market.quantity': 'Quantity',
+  'market.ofN': 'of {n}',
+  'market.priceEach': 'Price each',
+  'coin.g': 'g',
+  'coin.s': 's',
+  'coin.c': 'c',
   'market.err.minPrice': 'Name a price of at least 1 copper.',
   'market.err.noQuestItems': 'The Merchant will not broker quest items.',
 
   // ---- Bags ---------------------------------------------------------------
   'bags.title': 'Bags',
   'bags.empty': 'Your bags are empty.',
+  'market.saleProceeds': 'Sale proceeds',
+  'bag.tip.trade': 'Click to offer in trade',
+  'bag.tip.questNoMarket': 'Cannot be sold on the market',
+  'bag.tip.market': 'Click to put on the market',
+  'bag.tip.sell': 'Click to sell',
+  'bag.tip.equip': 'Click to equip',
+  'bag.tip.consume': 'Click to consume',
 
   // ---- Spellbook ----------------------------------------------------------
   'spellbook.title': 'Spellbook',
   'spellbook.trainable': 'Trainable at level {level}',
   'spellbook.trainableTip': 'You will learn this at level {level}.',
+  'spell.channeled': 'Channeled',
+  'spell.castS': '{s}s cast',
+  'spell.cooldownS': '{s}s cooldown',
+  'quest.returnTo': 'Return to {name}',
 
   // ---- Character sheet ----------------------------------------------------
   'char.levelClass': 'Level {level} {cls}',
@@ -215,6 +277,38 @@ export const EN: Record<string, string> = {
   // ---- Tooltips -----------------------------------------------------------
   'tt.classes': 'Classes: {classes}',
   'tt.secondsRemaining': '{n} seconds remaining',
+  'tt.damageLine': '{min} - {max} Damage&nbsp;&nbsp;Speed {speed}',
+  'tt.dpsLine': '({dps} damage per second)',
+  'tt.dagger': 'Dagger',
+  'tt.armorLine': '{v} Armor',
+  'tt.statPlus': '+{v} {stat}',
+  'tt.useFood': 'Use: Restores {hp} health over 18 sec. Must remain seated while eating.',
+  'tt.useDrink': 'Use: Restores {mana} mana over 18 sec. Must remain seated while drinking.',
+  'tt.questItem': 'Quest Item',
+  'tt.sellPrice': 'Sell price: {money}',
+  'tt.rank': 'Rank {n}',
+  'tt.cost': '{cost} {res}',
+  'tt.rangeYd': '{range} yd range',
+  'tt.channeled': 'Channeled ({sec} sec)',
+  'tt.castSec': '{sec} sec cast',
+  'tt.instant': 'Instant',
+  'tt.cooldown': '{sec} sec cooldown',
+
+  // ---- Stat / resource words ---------------------------------------------
+  'stat.str': 'Strength',
+  'stat.agi': 'Agility',
+  'stat.sta': 'Stamina',
+  'stat.int': 'Intellect',
+  'stat.spi': 'Spirit',
+  'res.rage': 'Rage',
+  'res.energy': 'Energy',
+  'res.mana': 'Mana',
+
+  // ---- Cast bar / target frame transient states --------------------------
+  'cast.eating': 'Eating…',
+  'cast.drinking': 'Drinking…',
+  'cast.eatingDrinking': 'Eating & Drinking…',
+  'target.dead': 'Dead',
 
   // ---- Target frame -------------------------------------------------------
   'target.elite': 'ELITE',
@@ -237,12 +331,17 @@ export const EN: Record<string, string> = {
   'prompt.duelRequest': '{name} challenges you to a duel.',
 
   // ---- Trade --------------------------------------------------------------
+  'trade.with': 'Trade with {name}',
   'trade.yourOffer': 'Your offer',
   'trade.theirOffer': "{name}'s offer",
   'trade.accept': 'Accept Trade',
   'trade.waiting': 'Waiting…',
   'trade.hint': 'Click an offered item to remove it. Both sides must press Accept Trade.',
   'trade.cancel': 'Cancel',
+  'trade.addHint': 'Click items in your bags to add them',
+  'trade.nothingYet': 'Nothing offered yet',
+  'trade.moneyLabel': 'Money:',
+  'trade.copperWord': 'copper',
 
   // ---- Options / settings menu -------------------------------------------
   'menu.game.title': 'Game Menu',
@@ -296,6 +395,10 @@ export const EN: Record<string, string> = {
   'keybind.act.chat': 'Open Chat',
   'keybind.act.attack': 'Attack',
   'keybind.act.actionbar': 'Action Bar {n}',
+  'keybind.cat.Movement': 'Movement',
+  'keybind.cat.Targeting': 'Targeting',
+  'keybind.cat.Interface': 'Interface',
+  'keybind.cat.Action Bar': 'Action Bar',
 
   // ---- Interaction feedback ----------------------------------------------
   'interact.tooFar': 'Too far away.',
@@ -303,4 +406,7 @@ export const EN: Record<string, string> = {
 
   // ---- NPC greeting -------------------------------------------------------
   'npc.greetingDefault': 'Greetings.',
+
+  // ---- Dungeon portals (nameplates) --------------------------------------
+  'dungeon.exit': '{name} Exit',
 };

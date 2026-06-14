@@ -41,7 +41,23 @@ export function abilityDesc(id: string): string {
 // the English name the sim stamped on the aura (e.g. boss-only pulses).
 export function auraName(aura: Pick<Aura, 'id' | 'name'>): string {
   if (ABILITIES[aura.id]) return abilityName(aura.id);
-  return aura.name;
+  return auraDisplayName(aura.name);
+}
+
+// Reverse indexes so aura *events* (which carry an English display name, not an
+// id) can still be localized: ability names and boss AoE-pulse names.
+const ABILITY_ID_BY_NAME: Record<string, string> = {};
+for (const [id, def] of Object.entries(ABILITIES)) ABILITY_ID_BY_NAME[def.name] = id;
+const PULSE_MOB_BY_NAME: Record<string, string> = {};
+for (const [id, m] of Object.entries(MOBS)) if (m.aoePulse) PULSE_MOB_BY_NAME[m.aoePulse.name] = id;
+
+// Localize an aura/effect by its English display name (best-effort).
+export function auraDisplayName(enName: string): string {
+  const aid = ABILITY_ID_BY_NAME[enName];
+  if (aid) return abilityName(aid);
+  const mid = PULSE_MOB_BY_NAME[enName];
+  if (mid) return pick(enName, ZH_CONTENT.mobs[mid]?.aoePulse);
+  return enName;
 }
 
 // ---- Items ----------------------------------------------------------------
