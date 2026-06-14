@@ -16,6 +16,7 @@ import { iconDataUrl, QUALITY_COLOR } from './icons';
 import { Keybinds, BIND_ACTIONS, BIND_CATEGORIES, BindAction, isReservedCode, keyLabel } from '../game/keybinds';
 import { Settings, GameSettings, SETTING_RANGES } from '../game/settings';
 import { t, onLocaleChange } from '../i18n';
+import { localizeError } from '../i18n/errors';
 import {
   abilityName, abilityDesc, auraName, auraDisplayName, className, dungeonName, itemName, mobName,
   npcGreeting, npcName, npcTitle, poiLabel, questCompletion, questName, questObjective,
@@ -1258,7 +1259,8 @@ export class Hud {
   }
 
   showError(text: string): void {
-    this.errorEl.textContent = text;
+    // sim/server errors arrive as canonical English; localize at display time
+    this.errorEl.textContent = localizeError(text);
     this.errorEl.style.opacity = '1';
     clearTimeout(this.errorTimer);
     this.errorTimer = window.setTimeout(() => { this.errorEl.style.opacity = '0'; }, 1600);
