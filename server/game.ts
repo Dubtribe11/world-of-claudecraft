@@ -801,6 +801,7 @@ export class GameServer {
       // arena (Ashen Coliseum 1v1 queue)
       case 'arena_queue': sim.arenaQueueJoin(pid); break;
       case 'arena_leave': sim.arenaQueueLeave(pid); break;
+      case 'arena_wager': if (typeof msg.copper === 'number') sim.arenaPlaceWager(msg.copper, pid); break;
 
       // post-cap cosmetic prestige (Max-Level XP Overflow, Phase 4)
       case 'prestige': sim.prestige(pid); break;

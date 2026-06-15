@@ -779,6 +779,9 @@ export class ClientWorld implements IWorld {
   arenaQueueLeave(): void {
     this.cmd({ cmd: 'arena_leave' });
   }
+  arenaPlaceWager(copper: number): void {
+    this.cmd({ cmd: 'arena_wager', copper });
+  }
   marketList(itemId: string, count: number, price: number): void {
     this.cmd({ cmd: 'market_list', item: itemId, count, price });
   }

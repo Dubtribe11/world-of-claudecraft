@@ -1,4 +1,4 @@
-import type { Entity, EquipSlot, InvSlot, MoveInput, PlayerClass, QuestProgress, QuestState, ResourceType } from './sim/types';
+import type { ArenaMap, Entity, EquipSlot, InvSlot, MoveInput, PlayerClass, QuestProgress, QuestState, ResourceType } from './sim/types';
 import type { ResolvedAbility } from './sim/sim';
 import type { TalentAllocation, SavedLoadout, Role } from './sim/content/talents';
 
@@ -111,16 +111,25 @@ export interface ArenaInfo {
   rating: number;
   wins: number;
   losses: number;
+  goldWon: number; // lifetime net copper won from arena wagers
+  wagerTiers: number[]; // selectable optional stakes (copper); first is 0 = no bet
   queued: boolean;
   queueSize: number;
   // present only while in a match
   match: {
-    state: 'countdown' | 'active' | 'over';
+    state: 'wager' | 'countdown' | 'active' | 'over';
     oppName: string;
     oppClass: PlayerClass;
     oppLevel: number;
     oppPid: number;
+    map: ArenaMap; // which pit this bout drew: the open coliseum or the labyrinth
+    mapName: string; // display name of the map
     returnIn?: number; // whole seconds left in the post-bout aftermath ('over')
+    wagerEndsIn?: number; // whole seconds left to place a stake ('wager')
+    myStake: number; // my current pledged stake (copper)
+    oppStake: number; // the opponent's pledged stake (copper)
+    pot: number; // the purse the current stakes settle (matched lower × 2)
+    stakeLocked: boolean; // the wager window closed and the pot is escrowed
   } | null;
   // live standings of rated players currently online, best first
   ladder: ArenaLadderEntry[];
@@ -239,6 +248,8 @@ export interface IWorld {
   searchCharacters(query: string): Promise<CharacterSearchResult[]>;
   arenaQueueJoin(): void;
   arenaQueueLeave(): void;
+  // pledge an optional gold stake during a match's wager window (0 clears it)
+  arenaPlaceWager(copper: number): void;
   // World Market
   marketList(itemId: string, count: number, price: number): void;
   marketBuy(listingId: number): void;

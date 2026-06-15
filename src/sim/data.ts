@@ -5,7 +5,7 @@
 // and owns the world-layout constants.
 
 import type {
-  CampDef, DungeonDef, GroundObjectDef, ItemDef, MobTemplate, NpcDef,
+  ArenaMap, CampDef, DungeonDef, GroundObjectDef, ItemDef, MobTemplate, NpcDef,
   PlayerClass, QuestDef, QuestState, ZoneDef, ZonePropsDef,
 } from './types';
 import { BASE_ITEMS } from './content/items';
@@ -198,6 +198,21 @@ export function arenaOrigin(slot: number): { x: number; z: number } {
 
 export function isArenaPos(x: number): boolean {
   return x >= ARENA_X_MIN;
+}
+
+// The two arena maps. Map assignment is slot-indexed (a pure function of the
+// slot) so collision (sim/colliders.ts) and rendering (render/) can resolve a
+// position's map without consulting live match state — even slots run the open
+// Ashen Coliseum, odd slots run the Labyrinth maze. Matchmaking rotates new
+// bouts across the maps (see Sim.pickArenaSlot), so both show up in play. The
+// ArenaMap type lives in sim/types.ts (the shared type home).
+export const ARENA_MAP_NAMES: Record<ArenaMap, string> = {
+  coliseum: 'The Ashen Coliseum',
+  labyrinth: 'The Labyrinth',
+};
+
+export function arenaMapForSlot(slot: number): ArenaMap {
+  return slot % 2 === 0 ? 'coliseum' : 'labyrinth';
 }
 
 // Nearest arena instance origin to a far-off position, matched by z-band (the

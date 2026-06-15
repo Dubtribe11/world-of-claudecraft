@@ -1,11 +1,12 @@
 import {
-  ABILITIES, ARENA_SLOT_COUNT, CAMPS, CLASSES, DUNGEONS, DUNGEON_LIST, DungeonDef, arenaOrigin, dungeonAt,
+  ABILITIES, ARENA_MAP_NAMES, ARENA_SLOT_COUNT, CAMPS, CLASSES, DUNGEONS, DUNGEON_LIST, DungeonDef,
+  arenaMapForSlot, arenaOrigin, dungeonAt,
   DUNGEON_X_THRESHOLD, GROUND_OBJECTS, GROUP_XP_BONUS, INSTANCE_SLOT_COUNT, isArenaPos,
   ITEMS, MOBS, NPCS, PLAYER_START, QUESTS, questRewardItemId, abilitiesKnownAt, instanceOrigin,
   zoneAt,
 } from './data';
 import { ARENA_SPAWN_A, ARENA_SPAWN_B } from './dungeon_layout';
-import { resolvePosition } from './colliders';
+import { arenaLineOfSightClear, resolvePosition } from './colliders';
 import { findPath } from './pathfind';
 import { createGroundObject, createMob, createNpc, createPlayer, recalcPlayerStats, PlayerEquipment } from './entity';
 import {
@@ -22,6 +23,7 @@ import {
 import { groundHeight, WATER_LEVEL } from './world';
 import type { LeaderboardEntry } from '../world_api';
 import {
+  ArenaMap,
   AbilityDef, AbilityEffect, Aura, AuraKind, CAST_PUSHBACK_SEC, CHANNEL_PUSHBACK_FRACTION, CONSUME_DURATION,
   CONSUME_TICKS, CrowdControlDrCategory, DT, Entity, EquipSlot, FISHING_CAST_ID, FISHING_CAST_TIME, GCD,
   INTERACT_RANGE, InvSlot, LootEntry, LootSlot, MELEE_RANGE, MAX_LEVEL, MobFamily,
@@ -50,6 +52,7 @@ const PARTY_MAX = 5;
 const PARTY_XP_RANGE = 80; // yards: members this close share kill xp/credit
 const DUEL_COUNTDOWN = 3;
 // Ashen Coliseum 1v1 arena
+const ARENA_WAGER_WINDOW = 12; // seconds to place an optional side-bet before the bout
 const ARENA_COUNTDOWN = 5; // gates pre-fight: heal up, no swings land yet
 const ARENA_RETURN_DELAY = 5; // aftermath: hold on the sands before going home
 const ARENA_MAX_DURATION = 150; // seconds; a stalling match resolves on hp%
@@ -57,6 +60,10 @@ const ARENA_BASE_RATING = 1500; // every character starts here, unranked
 const ARENA_MIN_RATING = 100; // a rating floor so a losing streak can't go absurd
 const ARENA_K_FACTOR = 32; // Elo sensitivity per match
 const ARENA_LADDER_SIZE = 10; // live online standings shipped to clients
+// Optional wager stakes (copper). 0 = no bet; both fighters must cover a tier
+// for it to lock (the matched stake is the lower of the two offers). 100c = 1s,
+// 10000c = 1g, so these are: none / 10s / 50s / 1g / 5g.
+const ARENA_WAGER_TIERS = [0, 1000, 5000, 10000, 50000];
 const PVP_CC_DR_RESET = 18; // seconds before a repeated PvP CC category is fresh again
 const PVP_CC_DR_MULTIPLIERS = [1, 0.5, 0.25] as const;
 const SAY_RANGE = 25; // /say carries a short distance; /yell across a camp
@@ -169,12 +176,23 @@ export interface ArenaMatch {
   a: number; // pid
   b: number; // pid
   slot: number; // arena instance slot
-  state: 'countdown' | 'active' | 'over';
-  timer: number; // countdown remaining, then elapsed once active, then return countdown
+  map: ArenaMap; // which pit (slot-indexed): the open coliseum or the labyrinth
+  state: 'wager' | 'countdown' | 'active' | 'over';
+  timer: number; // wager window, then countdown, then elapsed, then return countdown
   returnA: { x: number; z: number; facing: number };
   returnB: { x: number; z: number; facing: number };
   ratingA: number;
   ratingB: number;
+  // Optional gold wager. `offer*` are each fighter's pledged stake during the
+  // wager window; on lock the matched `stake` (= min of both, capped at what
+  // each can pay) is escrowed from both and `pot` (= 2·stake) goes to the
+  // winner. `escrowed` guards the deduction, `paid` the single payout.
+  offerA: number;
+  offerB: number;
+  stake: number;
+  pot: number;
+  escrowed: boolean;
+  paid: boolean;
 }
 
 // Standard Elo. Returns the points the winner gains (and the loser loses) for
@@ -249,6 +267,7 @@ export interface PlayerMeta {
   arenaRating: number;
   arenaWins: number;
   arenaLosses: number;
+  arenaGoldWon: number; // lifetime net copper won from arena wagers (display stat)
   // Talents & Specializations. `talents` is the active allocation; `talentMods`
   // is its precomputed flat struct — resolved only on allocation/respec/loadout
   // change (recomputeTalents), never walked on the combat or stat hot path.
@@ -317,6 +336,7 @@ export interface CharacterState {
   arenaRating?: number;
   arenaWins?: number;
   arenaLosses?: number;
+  arenaGoldWon?: number;
   // Talents & Specializations (JSONB; no schema migration). All optional so
   // characters saved before talents existed load cleanly (default: no points spent).
   talents?: TalentAllocation;
@@ -544,6 +564,7 @@ export class Sim {
       arenaRating: opts?.state?.arenaRating ?? ARENA_BASE_RATING,
       arenaWins: opts?.state?.arenaWins ?? 0,
       arenaLosses: opts?.state?.arenaLosses ?? 0,
+      arenaGoldWon: opts?.state?.arenaGoldWon ?? 0,
       talents: emptyAllocation(),
       talentMods: emptyModifiers(),
       loadouts: [],
@@ -661,6 +682,7 @@ export class Sim {
       arenaRating: meta.arenaRating,
       arenaWins: meta.arenaWins,
       arenaLosses: meta.arenaLosses,
+      arenaGoldWon: meta.arenaGoldWon,
       talents: cloneAllocation(meta.talents),
       loadouts: meta.loadouts.map((l) => ({ name: l.name, alloc: cloneAllocation(l.alloc), bar: [...l.bar] })),
       activeLoadout: meta.activeLoadout,
@@ -1534,6 +1556,15 @@ export class Sim {
     if (known) this.castAbility(known.def.id, pid);
   }
 
+  // Line-of-sight gate for ranged casts, scoped to the arena pits. Melee/self
+  // abilities (range within melee reach) ignore it; PvE is untouched. Walls and
+  // pillars in the maze block the sightline, so peeking cover matters.
+  private arenaLosClear(p: Entity, target: Entity, ability: AbilityDef): boolean {
+    if (ability.range <= MELEE_RANGE) return true;
+    if (!isArenaPos(p.pos.x)) return true;
+    return arenaLineOfSightClear(p.pos.x, p.pos.z, target.pos.x, target.pos.z);
+  }
+
   castAbility(abilityId: string, pid?: number): void {
     const r = this.resolve(pid);
     if (!r) return;
@@ -1598,6 +1629,7 @@ export class Sim {
       if (ability.minRange && d < ability.minRange) { this.error(p.id, 'Too close!'); return; }
       const facingDiff = Math.abs(normAngle(angleTo(p.pos, target.pos) - p.facing));
       if (facingDiff > MELEE_ARC) { this.error(p.id, 'You must be facing your target.'); return; }
+      if (!this.arenaLosClear(p, target, ability)) { this.error(p.id, 'Target is not in line of sight.'); return; }
       // execute-style gate: only usable while the target is nearly dead
       if (ability.requiresTargetHpBelow !== undefined
         && target.hp > target.maxHp * ability.requiresTargetHpBelow) {
@@ -1778,6 +1810,9 @@ export class Sim {
       const d = dist2d(p.pos, target.pos);
       const maxRange = ability.range > 0 ? ability.range : MELEE_RANGE;
       if (d > maxRange + 2) { this.error(p.id, 'Out of range.'); return; }
+      // a target that ducked behind a pillar mid-cast breaks the spell (the cost
+      // hasn't been spent yet, so a juked cast simply fizzles — true pillaring)
+      if (!this.arenaLosClear(p, target, ability)) { this.error(p.id, 'Target is not in line of sight.'); return; }
     }
     if (p.resource < res.cost && !this.formShiftKind(p, ability)) { this.error(p.id, 'Not enough ' + (p.resourceType ?? 'resource') + '!'); return; }
 
@@ -2338,6 +2373,8 @@ export class Sim {
     // casters (wand-style, no dead zone so they don't run into melee — #94)
     const ranged = CLASSES[meta.cls].ranged;
     if (ranged && d <= ranged.maxRange && d >= (ranged.wand ? 0 : ranged.minRange)) {
+      // arena cover blocks shots too: no auto-fire through a wall or pillar
+      if (isArenaPos(p.pos.x) && !arenaLineOfSightClear(p.pos.x, p.pos.z, t.pos.x, t.pos.z)) return;
       this.rangedSwing(p, t, ranged);
       p.swingTimer = ranged.speed * this.swingIntervalMult(p);
       return;
@@ -4452,11 +4489,65 @@ export class Sim {
     return true;
   }
 
+  // Pledge an optional gold stake during a match's wager window. `copper` snaps
+  // to a valid tier and is capped at what the fighter can actually pay; the bet
+  // only matters if BOTH fighters cover a tier (the lock matches the lower one).
+  // Passing 0 (or anything that doesn't snap to a tier) clears the pledge.
+  arenaPlaceWager(copper: number, pid?: number): void {
+    const r = this.resolve(pid);
+    if (!r) return;
+    const id = r.meta.entityId;
+    const match = this.arenaMatches.get(id);
+    if (!match) { this.error(id, 'You are not in an arena match.'); return; }
+    if (match.state !== 'wager') { this.error(id, 'The wager window has closed.'); return; }
+    // snap down to the highest tier the fighter both selected and can afford
+    let stake = 0;
+    for (const tier of ARENA_WAGER_TIERS) {
+      if (tier <= copper && tier <= r.meta.copper) stake = tier;
+    }
+    if (id === match.a) match.offerA = stake; else match.offerB = stake;
+    this.emit({ type: 'log', text: stake > 0 ? `You pledge ${formatMoney(stake)}.` : 'You clear your wager.', color: '#ffd54a', pid: id });
+  }
+
+  // Close the betting and escrow the matched stake from both fighters. The stake
+  // is the lower of the two pledges, never more than either can pay, so neither
+  // ends in the red. Zero stake = an unwagered (or one-sided) bout: nothing moves.
+  private lockArenaWager(match: ArenaMatch): void {
+    const aMeta = this.players.get(match.a);
+    const bMeta = this.players.get(match.b);
+    if (!aMeta || !bMeta) return;
+    const stake = Math.min(match.offerA, match.offerB, aMeta.copper, bMeta.copper);
+    if (stake <= 0) return;
+    aMeta.copper -= stake;
+    bMeta.copper -= stake;
+    match.stake = stake;
+    match.pot = stake * 2;
+    match.escrowed = true;
+    for (const mPid of [match.a, match.b]) {
+      this.emit({ type: 'arenaWagerLocked', pot: match.pot, stake, pid: mPid });
+      this.emit({ type: 'log', text: `Wager locked — ${formatMoney(match.pot)} to the victor.`, color: '#ffd54a', pid: mPid });
+    }
+  }
+
   private freeArenaSlot(): number | null {
     for (let i = 0; i < ARENA_SLOT_COUNT; i++) {
       if (!this.arenaBusySlots.has(i)) return i;
     }
     return null;
+  }
+
+  // Seat the next bout on a free slot, rotating the map so the open Coliseum and
+  // the Labyrinth both see play. Prefers a slot whose map matches the rotation
+  // parity (the match counter), falling back to any free slot. Deterministic.
+  private pickArenaSlot(): number | null {
+    const preferred: ArenaMap = this.nextArenaMatchId % 2 === 0 ? 'coliseum' : 'labyrinth';
+    let fallback: number | null = null;
+    for (let i = 0; i < ARENA_SLOT_COUNT; i++) {
+      if (this.arenaBusySlots.has(i)) continue;
+      if (arenaMapForSlot(i) === preferred) return i;
+      if (fallback === null) fallback = i;
+    }
+    return fallback;
   }
 
   private updateArena(): void {
@@ -4478,6 +4569,23 @@ export class Sim {
         // aftermath: both already cleansed and scored — count down, then go home
         match.timer -= DT;
         if (match.timer <= 0) this.returnFromArena(match);
+        continue;
+      }
+      if (match.state === 'wager') {
+        // betting window: optional stakes, no hostility. Tick the clock; on
+        // expiry lock the matched stake, escrow it, then open the fight countdown.
+        const before = Math.ceil(match.timer);
+        match.timer -= DT;
+        const after = Math.ceil(match.timer);
+        if (after < before && after > 0 && after <= 3) {
+          for (const mPid of [match.a, match.b]) this.emit({ type: 'arenaCountdown', seconds: after, pid: mPid });
+        }
+        if (match.timer <= 0) {
+          this.lockArenaWager(match);
+          match.state = 'countdown';
+          match.timer = ARENA_COUNTDOWN;
+          for (const mPid of [match.a, match.b]) this.emit({ type: 'arenaCountdown', seconds: ARENA_COUNTDOWN, pid: mPid });
+        }
         continue;
       }
       if (match.state === 'countdown') {
@@ -4536,7 +4644,7 @@ export class Sim {
   }
 
   private startArenaMatch(aPid: number, bPid: number): void {
-    const slot = this.freeArenaSlot();
+    const slot = this.pickArenaSlot();
     const aMeta = this.players.get(aPid);
     const bMeta = this.players.get(bPid);
     const ea = this.entities.get(aPid);
@@ -4548,11 +4656,13 @@ export class Sim {
       return;
     }
     this.arenaBusySlots.add(slot);
+    const map = arenaMapForSlot(slot);
     const match: ArenaMatch = {
-      id: this.nextArenaMatchId++, a: aPid, b: bPid, slot, state: 'countdown', timer: ARENA_COUNTDOWN,
+      id: this.nextArenaMatchId++, a: aPid, b: bPid, slot, map, state: 'wager', timer: ARENA_WAGER_WINDOW,
       returnA: { x: ea.pos.x, z: ea.pos.z, facing: ea.facing },
       returnB: { x: eb.pos.x, z: eb.pos.z, facing: eb.facing },
       ratingA: aMeta.arenaRating, ratingB: bMeta.arenaRating,
+      offerA: 0, offerB: 0, stake: 0, pot: 0, escrowed: false, paid: false,
     };
     this.arenaMatches.set(aPid, match);
     this.arenaMatches.set(bPid, match);
@@ -4561,11 +4671,11 @@ export class Sim {
     this.placeInArena(eb, origin, ARENA_SPAWN_B);
     this.resetForArena(ea);
     this.resetForArena(eb);
-    this.emit({ type: 'arenaFound', oppName: bMeta.name, oppClass: bMeta.cls, oppLevel: eb.level, pid: aPid });
-    this.emit({ type: 'arenaFound', oppName: aMeta.name, oppClass: aMeta.cls, oppLevel: ea.level, pid: bPid });
+    const mapName = ARENA_MAP_NAMES[map];
+    this.emit({ type: 'arenaFound', oppName: bMeta.name, oppClass: bMeta.cls, oppLevel: eb.level, map, mapName, pid: aPid });
+    this.emit({ type: 'arenaFound', oppName: aMeta.name, oppClass: aMeta.cls, oppLevel: ea.level, map, mapName, pid: bPid });
     for (const mPid of [aPid, bPid]) {
-      this.emit({ type: 'arenaCountdown', seconds: ARENA_COUNTDOWN, pid: mPid });
-      this.emit({ type: 'log', text: 'You step onto the sands of the Ashen Coliseum.', color: '#ffa040', pid: mPid });
+      this.emit({ type: 'log', text: `You step onto the sands of ${mapName}. Place your wager!`, color: '#ffa040', pid: mPid });
     }
   }
 
@@ -4639,13 +4749,15 @@ export class Sim {
       }
       aMeta.arenaRating = Math.max(ARENA_MIN_RATING, ratingA0 + deltaA);
       bMeta.arenaRating = Math.max(ARENA_MIN_RATING, ratingB0 - deltaA);
+      // settle the wager (once): winner takes the whole pot, a draw refunds both
+      const [goldA, goldB] = this.settleArenaWager(match, winnerPid, aMeta, bMeta);
       this.emit({
         type: 'arenaEnd', pid: match.a, draw: winnerPid === null, won: winnerPid === match.a,
-        oppName: bMeta.name, ratingBefore: ratingA0, ratingAfter: aMeta.arenaRating,
+        oppName: bMeta.name, ratingBefore: ratingA0, ratingAfter: aMeta.arenaRating, goldDelta: goldA,
       });
       this.emit({
         type: 'arenaEnd', pid: match.b, draw: winnerPid === null, won: winnerPid === match.b,
-        oppName: aMeta.name, ratingBefore: ratingB0, ratingAfter: bMeta.arenaRating,
+        oppName: aMeta.name, ratingBefore: ratingB0, ratingAfter: bMeta.arenaRating, goldDelta: goldB,
       });
     }
 
@@ -4662,6 +4774,24 @@ export class Sim {
     for (const mPid of [match.a, match.b]) {
       this.emit({ type: 'log', text: 'The bout is decided. Returning to the world…', color: '#ffa040', pid: mPid });
     }
+  }
+
+  // Pay out an escrowed wager exactly once and report each fighter's net copper
+  // (+stake won / -stake lost / 0 refunded). Returns [goldDeltaA, goldDeltaB].
+  private settleArenaWager(match: ArenaMatch, winnerPid: number | null, aMeta: PlayerMeta, bMeta: PlayerMeta): [number, number] {
+    if (!match.escrowed || match.paid || match.stake <= 0) return [0, 0];
+    match.paid = true;
+    const stake = match.stake;
+    if (winnerPid === null) {
+      // draw: hand each fighter their stake back
+      aMeta.copper += stake;
+      bMeta.copper += stake;
+      return [0, 0];
+    }
+    const winner = winnerPid === match.a ? aMeta : bMeta;
+    winner.copper += match.pot; // own stake back + the opponent's
+    winner.arenaGoldWon += stake;
+    return winnerPid === match.a ? [stake, -stake] : [-stake, stake];
   }
 
   // Teleport both fighters back to where they queued, fully cleansed (no arena
@@ -4709,9 +4839,17 @@ export class Sim {
       const oppMeta = this.players.get(oppPid);
       const oppE = this.entities.get(oppPid);
       if (oppMeta && oppE) {
+        const myStake = match.a === pid ? match.offerA : match.offerB;
+        const oppStake = match.a === pid ? match.offerB : match.offerA;
+        // before lock: preview the pot the current pledges would settle (the
+        // matched lower offer, ×2); after lock: the escrowed pot
+        const livePot = match.escrowed ? match.pot : Math.min(match.offerA, match.offerB) * 2;
         matchInfo = {
           state: match.state, oppName: oppMeta.name, oppClass: oppMeta.cls, oppLevel: oppE.level, oppPid,
+          map: match.map, mapName: ARENA_MAP_NAMES[match.map],
           returnIn: match.state === 'over' ? Math.max(0, Math.ceil(match.timer)) : undefined,
+          wagerEndsIn: match.state === 'wager' ? Math.max(0, Math.ceil(match.timer)) : undefined,
+          myStake, oppStake, pot: livePot, stakeLocked: match.escrowed,
         };
       }
     }
@@ -4719,6 +4857,8 @@ export class Sim {
       rating: meta.arenaRating,
       wins: meta.arenaWins,
       losses: meta.arenaLosses,
+      goldWon: meta.arenaGoldWon,
+      wagerTiers: ARENA_WAGER_TIERS,
       queued: this.arenaQueue.includes(pid),
       queueSize: this.arenaQueue.length,
       match: matchInfo,

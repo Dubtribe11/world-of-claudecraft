@@ -19,7 +19,7 @@ import { radialGlowTexture } from './textures';
 import { sharedUniforms } from './gfx';
 import { instanceOrigin } from '../sim/data';
 import {
-  ARENA_LAYOUT, CRYPT_LAYOUT, SANCTUM_LAYOUT, TEMPLE_LAYOUT, DUNGEON_WALL_X, TOMB_HD,
+  ARENA_LAYOUT, CRYPT_LAYOUT, LABYRINTH_LAYOUT, SANCTUM_LAYOUT, TEMPLE_LAYOUT, DUNGEON_WALL_X, TOMB_HD,
   DungeonLayout, GridPoint, WallStub,
 } from '../sim/dungeon_layout';
 
@@ -35,7 +35,7 @@ const FLOOR_CELL = 4; // kit floor tiles are 4x4 at MODULE_SCALE 1
 const FLOOR_Y = -0.05; // tile tops sit 0.05 above origin; sink so tops land at y=0
 const PILLAR_XZ_SCALE = 1.3; // 1.5u kit pillar -> ~1.95u footprint (collider r=1)
 
-type Variant = 'crypt' | 'bastion' | 'sanctum' | 'temple' | 'arena';
+type Variant = 'crypt' | 'bastion' | 'sanctum' | 'temple' | 'arena' | 'labyrinth';
 
 interface TorchColors {
   flame: number;
@@ -51,6 +51,8 @@ const TORCH_COLORS: Record<Variant, TorchColors> = {
   temple: { flame: 0xd9c9ff, emissive: 0x6a4fd0, light: 0xb79cff },
   // the Ashen Coliseum burns warm — amber braziers ringing the fighting sands
   arena: { flame: 0xffb24a, emissive: 0xcc5a14, light: 0xff9a3c },
+  // the Labyrinth runs cooler — pale green witchfire down the maze corridors
+  labyrinth: { flame: 0xbcffd0, emissive: 0x2a9e6a, light: 0x8ff0b4 },
 };
 
 // The Drowned Temple is flooded — a translucent, self-animating water sheet
@@ -276,7 +278,8 @@ export class DungeonInteriors {
   buildInterior(interior: string, ox: number, oz: number): void {
     const layout = interior === 'sanctum' ? SANCTUM_LAYOUT
       : interior === 'temple' ? TEMPLE_LAYOUT
-        : interior === 'arena' ? ARENA_LAYOUT : CRYPT_LAYOUT;
+        : interior === 'arena' ? ARENA_LAYOUT
+          : interior === 'labyrinth' ? LABYRINTH_LAYOUT : CRYPT_LAYOUT;
     const variant = this.variantFor(interior, ox);
     const group = new THREE.Group();
     const p = new Placements();
@@ -285,7 +288,10 @@ export class DungeonInteriors {
     this.placeWalls(p, layout, variant);
     this.placePillarsAndTorches(group, p, layout, variant);
     this.placeTombs(p, layout, variant);
-    this.placeStubs(p, layout.stubs, variant);
+    // the Labyrinth's stubs are free-standing maze walls (any position/length),
+    // not the sanctum's symmetric chamber waists — so it gets its own builder
+    if (variant === 'labyrinth') this.placeMazeWalls(group, p, layout.stubs);
+    else this.placeStubs(p, layout.stubs, variant);
     this.placeDais(group, p, layout, variant);
     this.placeAisleClutter(p, layout, variant);
     this.placeWallDressing(p, layout, variant);
@@ -406,6 +412,7 @@ export class DungeonInteriors {
   // (instanceOrigin in sim/data.ts: 900 + index*600) says which dungeon.
   private variantFor(interior: string, ox: number): Variant {
     if (interior === 'arena') return 'arena';
+    if (interior === 'labyrinth') return 'labyrinth';
     if (interior === 'sanctum') return 'sanctum';
     if (interior === 'temple') return 'temple';
     const bastionX = instanceOrigin(1, 0).x;
@@ -708,14 +715,37 @@ export class DungeonInteriors {
     }
   }
 
+  // The Labyrinth's maze walls: free-standing OBB segments (any position, any
+  // length) tiled from the same 8u KayKit wall module the room walls use, so the
+  // visual footprint matches the collider exactly. Each wall gets a witchfire
+  // glow pooled at its centre so the corridors stay legible in the gloom.
+  private placeMazeWalls(group: THREE.Group, p: Placements, stubs: WallStub[]): void {
+    for (const s of stubs) {
+      const horizontal = s.hw >= s.hd;
+      const half = horizontal ? s.hw : s.hd;
+      const n = Math.max(1, Math.round((half * 2) / 8));
+      const seg = (half * 2) / n;
+      const scale: [number, number, number] = [seg / 4, MODULE_SCALE, MODULE_SCALE];
+      const ry = horizontal ? 0 : Math.PI / 2;
+      for (let i = 0; i < n; i++) {
+        const off = -half + seg / 2 + i * seg;
+        const x = horizontal ? s.x + off : s.x;
+        const z = horizontal ? s.z : s.z + off;
+        const kind = hash2(x * 1.7, z * 0.9) < 0.78 ? 'wall' : 'wall_cracked';
+        p.add(kind, x, 0, z, ry, scale);
+      }
+      this.addTorchGlow(group, s.x, s.z, TORCH_COLORS.labyrinth.light, 0.07, 0.9);
+    }
+  }
+
   // Boss dais: chunky circular platform of foundation blocks (0.6u high,
   // walkable — deliberately NO collider, matching the layout contract).
   private placeDais(group: THREE.Group, p: Placements, layout: DungeonLayout, variant: Variant): void {
     const d = layout.dais;
-    // the arena keeps a flat fighting floor: no raised platform or rim clutter,
-    // just a warm light pool burned into the centre of the sands
-    if (variant === 'arena') {
-      this.addTorchGlow(group, d.x, d.z, TORCH_COLORS.arena.light, 0.07, 2.4);
+    // the arena maps keep a flat fighting floor: no raised platform or rim
+    // clutter, just a light pool burned into the centre of the sands
+    if (variant === 'arena' || variant === 'labyrinth') {
+      this.addTorchGlow(group, d.x, d.z, TORCH_COLORS[variant].light, 0.07, 2.4);
       return;
     }
     const quarter = Math.PI / 2;
@@ -756,7 +786,7 @@ export class DungeonInteriors {
 
   // Bone piles / debris strewn along the aisle (legacy deterministic spots)
   private placeAisleClutter(p: Placements, layout: DungeonLayout, variant: Variant): void {
-    if (variant === 'arena') return; // the fighting sands stay clear of obstacles
+    if (variant === 'arena' || variant === 'labyrinth') return; // fighting floors stay clear
     const dense = variant === 'sanctum' || variant === 'temple';
     const count = variant === 'sanctum' ? 14 : variant === 'temple' ? 12 : 10;
     for (let i = 0; i < count; i++) {
@@ -782,7 +812,7 @@ export class DungeonInteriors {
 
   // Variant-specific dressing hugging the walls (outside the walkable aisle)
   private placeWallDressing(p: Placements, layout: DungeonLayout, variant: Variant): void {
-    if (variant === 'arena') {
+    if (variant === 'arena' || variant === 'labyrinth') {
       // gladiatorial weapon trophies mounted high on the pit's side walls
       for (const z of [layout.zMin + 9, (layout.zMin + layout.zMax) / 2, layout.zMax - 9]) {
         for (const side of [-1, 1]) {
