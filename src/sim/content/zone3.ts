@@ -66,6 +66,31 @@ export const ZONE3_MOBS: Record<string, MobTemplate> = {
     ],
     scale: 0.85, color: 0x9c7a3c,
   },
+  ironvein_foreman: {
+    id: 'ironvein_foreman', name: 'Ironvein Foreman', minLevel: 16, maxLevel: 16, family: 'kobold', rare: true,
+    elite: true, canSwim: true, ccImmune: true, respawnMult: 864,
+    hpBase: 420, hpPerLevel: 70, dmgBase: 19, dmgPerLevel: 4.4, attackSpeed: 2.0,
+    armorPerLevel: 38, moveSpeed: 7, aggroRadius: 12,
+    aoePulse: { min: 28, max: 38, radius: 8, every: 10, name: 'Powder Keg', school: 'fire' },
+    summonAdds: { mobId: 'ironvein_sapper', count: 2, atHpPct: [0.50] },
+    enrage: { belowHpPct: 0.30, dmgMult: 1.45 },
+    loot: [
+      { copper: 420, chance: 1 },
+      { itemId: 'glowing_wax', chance: 1 },
+      { itemId: 'ironvein_pickblade', chance: 0.25 },
+      { itemId: 'ironvein_lantern_staff', chance: 0.25 },
+      { itemId: 'gutripper_shiv', chance: 0.25, rollGroup: 'ironvein_foreman_chase' },
+      { itemId: 'deathlord_sabatons', chance: 0.25, rollGroup: 'ironvein_foreman_chase' },
+    ],
+    scale: 1.05, color: 0xb0823a,
+  },
+  ironvein_sapper: {
+    id: 'ironvein_sapper', name: 'Ironvein Sapper', minLevel: 15, maxLevel: 16, family: 'kobold',
+    hpBase: 58, hpPerLevel: 20, dmgBase: 11, dmgPerLevel: 2.6, attackSpeed: 2.0,
+    armorPerLevel: 18, moveSpeed: 7.5, aggroRadius: 12,
+    loot: [],
+    scale: 0.85, color: 0x8f6b34,
+  },
   thornpeak_ogre: {
     id: 'thornpeak_ogre', name: 'Thornpeak Ogre', minLevel: 15, maxLevel: 16, family: 'ogre',
     hpBase: 66, hpPerLevel: 23, dmgBase: 11, dmgPerLevel: 2.6, attackSpeed: 2.6,
@@ -92,7 +117,11 @@ export const ZONE3_MOBS: Record<string, MobTemplate> = {
     hpBase: 200, hpPerLevel: 30, dmgBase: 12, dmgPerLevel: 2.7, attackSpeed: 2.6,
     armorPerLevel: 28, moveSpeed: 7, aggroRadius: 14,
     aoePulse: { min: 22, max: 30, radius: 10, every: 12, name: 'Ground Slam' },
-    loot: [{ copper: 2000, chance: 1 }],
+    loot: [
+      { copper: 2000, chance: 1 },
+      { itemId: 'drogmar_warboots', chance: 0.3 },
+      { itemId: 'drogmars_skullcleaver', chance: 0.25 },
+    ],
     scale: 1.5, color: 0x8c3b2e,
   },
   stormcrag_elemental: {
@@ -149,6 +178,28 @@ export const ZONE3_MOBS: Record<string, MobTemplate> = {
       { itemId: 'bone_fragments', chance: 0.6 },
     ],
     scale: 1.05, color: 0xcacfd2,
+  },
+  marrowlord_varkas: {
+    id: 'marrowlord_varkas', name: 'Marrowlord Varkas', minLevel: 19, maxLevel: 19, family: 'undead', rare: true,
+    elite: true, canSwim: true, ccImmune: true, respawnMult: 864,
+    hpBase: 480, hpPerLevel: 80, dmgBase: 22, dmgPerLevel: 5.0, attackSpeed: 2.4,
+    armorPerLevel: 44, moveSpeed: 6.5, aggroRadius: 13,
+    aoePulse: { min: 30, max: 42, radius: 11, every: 9, name: 'Marrow Rot', school: 'shadow' },
+    summonAdds: { mobId: 'varkas_boneguard', count: 2, atHpPct: [0.66, 0.33] },
+    loot: [
+      { copper: 650, chance: 1 },
+      { itemId: 'bone_fragments', chance: 1 },
+      { itemId: 'marrowlord_boneboots', chance: 0.3 },
+      { itemId: 'necromancers_legwraps', chance: 0.25, rollGroup: 'marrowlord_varkas_chase' },
+    ],
+    scale: 1.25, color: 0xd8d0bd,
+  },
+  varkas_boneguard: {
+    id: 'varkas_boneguard', name: 'Varkas Boneguard', minLevel: 18, maxLevel: 19, family: 'undead',
+    hpBase: 64, hpPerLevel: 22, dmgBase: 12, dmgPerLevel: 2.8, attackSpeed: 2.3,
+    armorPerLevel: 20, moveSpeed: 6.5, aggroRadius: 12,
+    loot: [],
+    scale: 1.0, color: 0xc9c2b5,
   },
 };
 
@@ -469,6 +520,7 @@ export const ZONE3_CAMPS: CampDef[] = [
   // Kobolds: Deeprock Burrows, west
   { mobId: 'deeprock_kobold', center: { x: 75, z: 625 }, radius: 18, count: 8 },
   { mobId: 'deeprock_kobold', center: { x: 105, z: 600 }, radius: 14, count: 6 },
+  { mobId: 'ironvein_foreman', center: { x: 100, z: 617 }, radius: 5, count: 1 },
   // Ogres: eastern foothills rising to Drogmar's war-camp
   { mobId: 'thornpeak_ogre', center: { x: -90, z: 700 }, radius: 22, count: 7 },
   { mobId: 'thornpeak_ogre', center: { x: -60, z: 730 }, radius: 18, count: 6 },
@@ -485,6 +537,7 @@ export const ZONE3_CAMPS: CampDef[] = [
   // Revenants: the old battlefield and the Sanctum gate plaza
   { mobId: 'boneclad_revenant', center: { x: -40, z: 830 }, radius: 20, count: 8 },
   { mobId: 'boneclad_revenant', center: { x: -15, z: 860 }, radius: 16, count: 6 },
+  { mobId: 'marrowlord_varkas', center: { x: -34, z: 842 }, radius: 5, count: 1 },
 ];
 
 export const ZONE3_OBJECTS: GroundObjectDef[] = [
@@ -559,6 +612,22 @@ export const ZONE3_ITEMS: Record<string, ItemDef> = {
     id: 'cultist_flayer', name: 'Cultist Flayer', kind: 'weapon', slot: 'mainhand', quality: 'uncommon',
     weapon: { min: 12, max: 19, speed: 1.7, dagger: true }, stats: { agi: 7 }, sellValue: 900, requiredClass: ['rogue', 'hunter'],
   },
+  drogmar_warboots: {
+    id: 'drogmar_warboots', name: "Drogmar's Warboots", kind: 'armor', slot: 'feet', quality: 'uncommon',
+    stats: { armor: 85, str: 3, sta: 4 }, sellValue: 950, requiredClass: ['warrior', 'paladin', 'shaman'],
+  },
+  ironvein_pickblade: {
+    id: 'ironvein_pickblade', name: 'Ironvein Pickblade', kind: 'weapon', slot: 'mainhand', quality: 'uncommon',
+    weapon: { min: 13, max: 21, speed: 1.8, dagger: true }, stats: { agi: 7, sta: 2 }, sellValue: 950, requiredClass: ['rogue', 'hunter'],
+  },
+  ironvein_lantern_staff: {
+    id: 'ironvein_lantern_staff', name: 'Ironvein Lantern Staff', kind: 'weapon', slot: 'mainhand', quality: 'uncommon',
+    weapon: { min: 19, max: 31, speed: 3.0 }, stats: { int: 7, spi: 3 }, sellValue: 950, requiredClass: ['mage', 'priest', 'warlock', 'druid'],
+  },
+  marrowlord_boneboots: {
+    id: 'marrowlord_boneboots', name: 'Marrowlord Boneboots', kind: 'armor', slot: 'feet', quality: 'uncommon',
+    stats: { armor: 90, sta: 5, str: 2 }, sellValue: 1050, requiredClass: ['warrior', 'paladin', 'shaman'],
+  },
   // --- quest & dungeon blues (rare) ---
   drogmars_skullcleaver: {
     id: 'drogmars_skullcleaver', name: "Drogmar's Skullcleaver", kind: 'weapon', slot: 'mainhand', quality: 'rare',
@@ -603,6 +672,54 @@ export const ZONE3_ITEMS: Record<string, ItemDef> = {
   wyrmscale_jerkin: {
     id: 'wyrmscale_jerkin', name: 'Wyrmscale Jerkin', kind: 'armor', slot: 'chest', quality: 'rare',
     stats: { armor: 145, agi: 10, sta: 5 }, sellValue: 3000, requiredClass: ['rogue', 'hunter'],
+  },
+  gravewyrm_stalkers_treads: {
+    id: 'gravewyrm_stalkers_treads', name: "Gravewyrm Stalker's Treads", kind: 'armor', slot: 'feet', quality: 'rare',
+    stats: { armor: 105, agi: 10, sta: 5 }, sellValue: 3200, requiredClass: ['rogue', 'hunter'],
+  },
+  gravewyrm_sabatons: {
+    id: 'gravewyrm_sabatons', name: 'Gravewyrm Sabatons', kind: 'armor', slot: 'feet', quality: 'rare',
+    stats: { armor: 145, str: 5, sta: 6 }, sellValue: 3200, requiredClass: ['warrior', 'paladin', 'shaman'],
+  },
+  wyrmcult_soulsteps: {
+    id: 'wyrmcult_soulsteps', name: 'Wyrmcult Soulsteps', kind: 'armor', slot: 'feet', quality: 'rare',
+    stats: { armor: 68, int: 9, spi: 5 }, sellValue: 3200, requiredClass: ['mage', 'priest', 'warlock', 'druid'],
+  },
+  deathlord_warplate: {
+    id: 'deathlord_warplate', name: 'Deathlord Warplate', kind: 'armor', slot: 'chest', quality: 'epic',
+    stats: { armor: 270, str: 8, sta: 10 }, sellValue: 9000, requiredClass: ['warrior', 'paladin', 'shaman'],
+  },
+  necromancers_starshroud: {
+    id: 'necromancers_starshroud', name: "Necromancer's Starshroud", kind: 'armor', slot: 'chest', quality: 'epic',
+    stats: { armor: 92, int: 14, spi: 8 }, sellValue: 9000, requiredClass: ['mage', 'priest', 'warlock', 'druid'],
+  },
+  wyrmshadow_harness: {
+    id: 'wyrmshadow_harness', name: 'Wyrmshadow Harness', kind: 'armor', slot: 'chest', quality: 'epic',
+    stats: { armor: 170, agi: 13, sta: 7 }, sellValue: 9000, requiredClass: ['rogue', 'hunter'],
+  },
+  deathlord_legguards: {
+    id: 'deathlord_legguards', name: 'Deathlord Legguards', kind: 'armor', slot: 'legs', quality: 'epic',
+    stats: { armor: 240, str: 8, sta: 9 }, sellValue: 9000, requiredClass: ['warrior', 'paladin', 'shaman'],
+  },
+  deathlord_sabatons: {
+    id: 'deathlord_sabatons', name: 'Deathlord Sabatons', kind: 'armor', slot: 'feet', quality: 'epic',
+    stats: { armor: 205, str: 7, sta: 8 }, sellValue: 9000, requiredClass: ['warrior', 'paladin', 'shaman'],
+  },
+  necromancers_soulsteps: {
+    id: 'necromancers_soulsteps', name: "Necromancer's Soulsteps", kind: 'armor', slot: 'feet', quality: 'epic',
+    stats: { armor: 80, int: 12, spi: 7 }, sellValue: 9000, requiredClass: ['mage', 'priest', 'warlock', 'druid'],
+  },
+  necromancers_legwraps: {
+    id: 'necromancers_legwraps', name: "Necromancer's Legwraps", kind: 'armor', slot: 'legs', quality: 'epic',
+    stats: { armor: 86, int: 13, spi: 7 }, sellValue: 9000, requiredClass: ['mage', 'priest', 'warlock', 'druid'],
+  },
+  wyrmshadow_treads: {
+    id: 'wyrmshadow_treads', name: 'Wyrmshadow Treads', kind: 'armor', slot: 'feet', quality: 'epic',
+    stats: { armor: 145, agi: 11, sta: 7 }, sellValue: 9000, requiredClass: ['rogue', 'hunter'],
+  },
+  wyrmshadow_legguards: {
+    id: 'wyrmshadow_legguards', name: 'Wyrmshadow Legguards', kind: 'armor', slot: 'legs', quality: 'epic',
+    stats: { armor: 155, agi: 12, sta: 7 }, sellValue: 9000, requiredClass: ['rogue', 'hunter'],
   },
   // --- the three epics (Korzul drops) ---
   wyrmfang_greatblade: {

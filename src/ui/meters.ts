@@ -4,10 +4,11 @@
 // on a party member. Finished encounters land in a small history and fold
 // into the session "All" segment; the panel pages between them.
 //
-// "Threat" is honest about this game's AI: mobs have no damage-based threat
-// table (proximity aggro + nearest-player retarget), so the tab shows each
-// member's damage on the engaged mob and marks who the mob is ACTUALLY
-// targeting (aggroTargetId, synced online).
+// "Threat" shows the engaged mob's REAL hate table (entity.threat, classic
+// rules: damage x stance modifiers, flat ability threat, split healing
+// threat — synced online as the top entries) and marks who the mob is
+// actually targeting (aggroTargetId). For finished encounters whose mob is
+// gone, it falls back to each member's damage on that mob.
 import type { IWorld } from '../world_api';
 import type { SimEvent } from '../sim/types';
 import { CLASSES } from '../sim/data';
@@ -177,6 +178,7 @@ export class Meters {
   toggle(): void {
     const on = this.root.style.display !== 'block';
     this.root.style.display = on ? 'block' : 'none';
+    document.body.classList.toggle('meters-open', on);
     if (on) this.render(true);
   }
 
@@ -199,6 +201,9 @@ export class Meters {
   private partyPids(): Set<number> {
     const pids = new Set<number>([this.world.player.id]);
     for (const m of this.world.partyInfo?.members ?? []) pids.add(m.pid);
+    for (const e of this.world.entities.values()) {
+      if (e.kind === 'mob' && e.ownerId !== null && pids.has(e.ownerId)) pids.add(e.id);
+    }
     return pids;
   }
 
@@ -245,11 +250,13 @@ export class Meters {
       ? (enc.mainMobName ? `Target: ${enc.mainMobName}` : 'No target engaged.')
       : `${enc.label} — ${fmtDuration(enc.duration)}`;
 
+    const liveThreat = mob && !mob.dead && mob.threat.size > 0 ? mob.threat : null;
     const rows = [...enc.tallies.values()]
       .map((t) => ({
         t,
         value: this.tab === 'dmg' ? t.dmg
           : this.tab === 'heal' ? t.heal
+          : liveThreat ? liveThreat.get(t.pid) ?? 0
           : (enc.mainMobId !== null ? t.dmgByMob.get(enc.mainMobId) ?? 0 : 0),
       }))
       .filter((r) => r.value > 0)

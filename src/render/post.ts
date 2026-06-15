@@ -71,6 +71,8 @@ export function buildComposer(
   webgl: THREE.WebGLRenderer,
   scene: THREE.Scene,
   camera: THREE.Camera,
+  width: number,
+  height: number,
 ): PostPipeline {
   const size = webgl.getDrawingBufferSize(new THREE.Vector2());
   // HDR target; HalfFloat keeps >1 colors for bloom. MSAA only helps when a
@@ -131,7 +133,7 @@ export function buildComposer(
   // run at ~3x the intended pixel area until the first window resize. Reset
   // to logical size x real ratio (identical to the resize-handler state).
   composer.setPixelRatio(webgl.getPixelRatio());
-  composer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(width, height);
 
   return {
     composer,

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the db layer so no Postgres is needed; interest logic is under test.
 vi.mock('../server/db', () => ({
+  pool: { query: vi.fn(async () => ({ rows: [] })) },
   saveCharacterState: vi.fn(async () => {}),
   openPlaySession: vi.fn(async () => 1),
   closePlaySession: vi.fn(async () => {}),
@@ -29,8 +30,14 @@ function lastSnap(sent: any[]): any {
   return null;
 }
 
-function joinServer(server: GameServer, fc: FakeClient, characterId: number, name: string): ClientSession {
-  const session = server.join(fc.ws, characterId, characterId, name, 'warrior', null);
+function joinServer(
+  server: GameServer,
+  fc: FakeClient,
+  characterId: number,
+  name: string,
+  cls: 'warrior' | 'rogue' = 'warrior',
+): ClientSession {
+  const session = server.join(fc.ws, characterId, characterId, name, cls, null);
   if ('error' in session) throw new Error(session.error);
   return session;
 }
@@ -319,6 +326,57 @@ describe('crowd interest management', () => {
     const at140 = lastSnap(viewerFc.sent);
     expect(entRecord(at140, subject.pid)).toBeNull();
     expect(inKeep(at140, subject.pid)).toBe(false);
+  });
+
+  it('hides undetected stealthed players and sends detected ones as translucent stealth', () => {
+    const rogueFc = fakeWs();
+    const rogue = joinServer(server, rogueFc, 3, 'Sneaks', 'rogue');
+    server.sim.setPlayerLevel(10, viewer.pid);
+    server.sim.setPlayerLevel(10, rogue.pid);
+    const v = server.sim.entities.get(viewer.pid)!;
+    placeAt(server, rogue.pid, v.pos.x + 30, v.pos.z);
+    server.sim.targetEntity(null, rogue.pid);
+    server.sim.castAbility('stealth', rogue.pid);
+
+    viewerFc.sent.length = 0;
+    broadcast(server);
+    let snap = lastSnap(viewerFc.sent);
+    expect(entRecord(snap, rogue.pid)).toBeNull();
+    expect(inKeep(snap, rogue.pid)).toBe(false);
+
+    server.sim.setPlayerLevel(15, viewer.pid);
+    viewerFc.sent.length = 0;
+    step(server);
+    snap = lastSnap(viewerFc.sent);
+    const detected = entRecord(snap, rogue.pid);
+    expect(detected).not.toBeNull();
+    expect(detected.auras.some((a: any) => a.kind === 'stealth')).toBe(true);
+  });
+
+  it('always sends stealthed party members unless they are dueling the viewer', () => {
+    const rogueFc = fakeWs();
+    const rogue = joinServer(server, rogueFc, 3, 'PartySneak', 'rogue');
+    server.sim.setPlayerLevel(10, viewer.pid);
+    server.sim.setPlayerLevel(10, rogue.pid);
+    server.sim.partyInvite(rogue.pid, viewer.pid);
+    server.sim.partyAccept(rogue.pid);
+    const v = server.sim.entities.get(viewer.pid)!;
+    placeAt(server, rogue.pid, v.pos.x + 30, v.pos.z);
+    server.sim.targetEntity(null, rogue.pid);
+    server.sim.castAbility('stealth', rogue.pid);
+
+    viewerFc.sent.length = 0;
+    broadcast(server);
+    let snap = lastSnap(viewerFc.sent);
+    expect(entRecord(snap, rogue.pid)).not.toBeNull();
+
+    server.sim.duelRequest(rogue.pid, viewer.pid);
+    server.sim.duelAccept(rogue.pid);
+    viewerFc.sent.length = 0;
+    step(server);
+    snap = lastSnap(viewerFc.sent);
+    expect(entRecord(snap, rogue.pid)).toBeNull();
+    expect(inKeep(snap, rogue.pid)).toBe(false);
   });
 
   it('keeps stationary npcs visible out to the legacy 120yd radius', () => {

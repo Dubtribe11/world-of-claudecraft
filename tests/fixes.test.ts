@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Sim } from '../src/sim/sim';
 import { Entity, dist2d } from '../src/sim/types';
-import { CRYPT_DOOR_POS, DUNGEON_X_THRESHOLD, LAKE, MOBS, NPCS, QUESTS } from '../src/sim/data';
+import { CRYPT_DOOR_POS, DUNGEON_LIST, DUNGEON_X_THRESHOLD, ITEMS, LAKE, MOBS, NPCS, QUESTS, zoneAt, zoneWelcomeText } from '../src/sim/data';
 import { createMob } from '../src/sim/entity';
 import { groundHeight, WATER_LEVEL } from '../src/sim/world';
 import { isBlocked, resolvePosition } from '../src/sim/colliders';
@@ -21,8 +21,47 @@ function teleportTo(sim: Sim, x: number, z: number, pid?: number) {
 }
 
 describe('quest lifecycle', () => {
+  it('stops showing the Redbrook starter hint after the first quest is accepted', () => {
+    const sim = makeSim();
+    const starterZone = zoneAt(sim.player.pos.z);
+
+    expect(zoneWelcomeText(starterZone, (questId) => sim.questState(questId)))
+      .toBe('Find Marshal Redbrook in town — he has work for you.');
+
+    const redbrook = [...sim.entities.values()].find((e) => e.templateId === 'marshal_redbrook')!;
+    teleportTo(sim, redbrook.pos.x + 2, redbrook.pos.z + 2);
+    sim.acceptQuest('q_wolves');
+    expect(zoneWelcomeText(starterZone, (questId) => sim.questState(questId))).toBeNull();
+
+    const qp = sim.questLog.get('q_wolves')!;
+    qp.counts[0] = 8;
+    qp.state = 'ready';
+
+    teleportTo(sim, redbrook.pos.x + 2, redbrook.pos.z + 2);
+    sim.turnInQuest('q_wolves');
+
+    expect(sim.questState('q_wolves')).toBe('done');
+    expect(zoneWelcomeText(starterZone, (questId) => sim.questState(questId))).toBeNull();
+  });
+
+  it('accepting a quest directly requires standing near the giver', () => {
+    const sim = makeSim();
+    teleportTo(sim, 0, -40);
+
+    sim.acceptQuest('q_wolves');
+    expect(sim.questState('q_wolves')).toBe('available');
+    expect(sim.questLog.has('q_wolves')).toBe(false);
+
+    const redbrook = [...sim.entities.values()].find((e) => e.templateId === 'marshal_redbrook')!;
+    teleportTo(sim, redbrook.pos.x + 2, redbrook.pos.z);
+    sim.acceptQuest('q_wolves');
+    expect(sim.questState('q_wolves')).toBe('active');
+  });
+
   it('a turned-in quest cannot be accepted again', () => {
     const sim = makeSim();
+    const redbrook = [...sim.entities.values()].find((e) => e.templateId === 'marshal_redbrook')!;
+    teleportTo(sim, redbrook.pos.x + 2, redbrook.pos.z + 2);
     sim.acceptQuest('q_wolves');
     expect(sim.questState('q_wolves')).toBe('active');
 
@@ -30,7 +69,6 @@ describe('quest lifecycle', () => {
     qp.counts[0] = 8;
     qp.state = 'ready';
 
-    const redbrook = [...sim.entities.values()].find((e) => e.templateId === 'marshal_redbrook')!;
     teleportTo(sim, redbrook.pos.x + 2, redbrook.pos.z + 2);
     sim.turnInQuest('q_wolves');
     expect(sim.questState('q_wolves')).toBe('done');
@@ -80,7 +118,8 @@ describe('collision & terrain', () => {
     for (const e of sim.entities.values()) {
       if (e.kind !== 'mob') continue;
       const h = groundHeight(e.pos.x, e.pos.z, SEED);
-      const min = MOBS[e.templateId].family === 'murloc' ? WATER_LEVEL - 0.55 : WATER_LEVEL + 0.35;
+      const canWade = MOBS[e.templateId].family === 'murloc' || MOBS[e.templateId].canSwim;
+      const min = canWade ? WATER_LEVEL - 0.55 : WATER_LEVEL + 0.35;
       expect(h, `${e.name} at ${e.pos.x.toFixed(0)},${e.pos.z.toFixed(0)}`).toBeGreaterThan(min);
     }
   });
@@ -118,6 +157,118 @@ describe('swimming', () => {
     wolf.spawnPos = { ...wolf.pos };
     for (let i = 0; i < 100; i++) sim.tick();
     expect(groundHeight(wolf.pos.x, wolf.pos.z, SEED)).toBeGreaterThan(WATER_LEVEL - 0.8);
+  });
+
+  it('rare swimmers can chase into deep water', () => {
+    const sim = makeSim();
+    const rare = createMob(990001, MOBS.elder_bristleback, 5, sim.groundPos(LAKE.x + 24, LAKE.z + 24));
+    for (let i = 0; i < 120; i++) {
+      (sim as any).moveToward(rare, { x: LAKE.x, y: 0, z: LAKE.z }, rare.moveSpeed);
+    }
+    expect(groundHeight(rare.pos.x, rare.pos.z, SEED)).toBeLessThan(WATER_LEVEL - 0.8);
+    expect(rare.pos.y).toBeGreaterThan(WATER_LEVEL - 1.0);
+  });
+});
+
+describe('rare spawn rules', () => {
+  it('rare spawns are elite, control immune, swimmers with long respawns', () => {
+    for (const id of [
+      'elder_bristleback',
+      'sableweb_matriarch',
+      'mirejaw_the_ravenous',
+      'sister_nhalia',
+      'ironvein_foreman',
+      'marrowlord_varkas',
+    ]) {
+      expect(MOBS[id], id).toMatchObject({
+        rare: true,
+        elite: true,
+        canSwim: true,
+        ccImmune: true,
+      });
+      if (id === 'elder_bristleback' || id === 'sableweb_matriarch') expect(MOBS[id].respawnMult).toBe(432);
+      else if (id === 'mirejaw_the_ravenous' || id === 'sister_nhalia') expect(MOBS[id].respawnMult).toBe(648);
+      else expect(MOBS[id].respawnMult).toBe(864);
+    }
+    expect(MOBS.mogger).toMatchObject({
+      rare: true,
+      elite: true,
+      canSwim: true,
+      ccImmune: true,
+      respawnMult: 4,
+    });
+  });
+
+  it('control auras do not stick to control-immune rares', () => {
+    const sim = makeSim();
+    const rare = createMob(990002, MOBS.sableweb_matriarch, 6, { x: 0, y: 0, z: 0 });
+
+    (sim as any).applyAura(rare, {
+      id: 'test_root',
+      name: 'Test Root',
+      kind: 'root',
+      remaining: 5,
+      duration: 5,
+      value: 0,
+      sourceId: sim.playerId,
+    });
+    expect(rare.auras.some((a) => a.kind === 'root')).toBe(false);
+
+    (sim as any).applyAura(rare, {
+      id: 'test_slow',
+      name: 'Test Slow',
+      kind: 'slow',
+      remaining: 5,
+      duration: 5,
+      value: 0.5,
+      sourceId: sim.playerId,
+    });
+    expect(rare.auras.some((a) => a.kind === 'slow')).toBe(true);
+  });
+
+  it('rare respawn timers use their configured multiplier', () => {
+    const sim = new Sim({ seed: SEED, playerClass: 'warrior', respawnSeconds: 2 });
+    const rare = createMob(990003, MOBS.elder_bristleback, 5, { x: 0, y: 0, z: 0 });
+    (sim as any).handleDeath(rare, null);
+    expect(rare.respawnTimer).toBe(864);
+  });
+
+  it('Mogger respawns on a quest-boss timer instead of a long rare-spawn timer', () => {
+    const sim = new Sim({ seed: SEED, playerClass: 'warrior', respawnSeconds: 2 });
+    const mogger = [...sim.entities.values()].find((e) => e.kind === 'mob' && e.templateId === 'mogger')!;
+
+    (sim as any).handleDeath(mogger, null);
+
+    expect(mogger.respawnTimer).toBe(8);
+  });
+
+  it('outdoor rare spawns have 3-player mechanics and no-loot summoned helpers', () => {
+    const rareIds = [
+      'elder_bristleback',
+      'sableweb_matriarch',
+      'mogger',
+      'mirejaw_the_ravenous',
+      'sister_nhalia',
+      'ironvein_foreman',
+      'marrowlord_varkas',
+    ];
+
+    for (const id of rareIds) {
+      const rare = MOBS[id];
+      expect(rare.elite, id).toBe(true);
+      expect(rare.ccImmune, id).toBe(true);
+      expect(
+        !!rare.aoePulse || !!rare.summonAdds || !!rare.enrage,
+        `${id} should have at least one mechanic`,
+      ).toBe(true);
+      if (rare.summonAdds) {
+        expect(MOBS[rare.summonAdds.mobId], `${id} summon target`).toBeTruthy();
+        expect(MOBS[rare.summonAdds.mobId].loot, `${id} summon loot`).toEqual([]);
+      }
+    }
+
+    expect(MOBS.mogger.summonAdds).toEqual({ mobId: 'mogger_lackey', count: 2, atHpPct: [0.70] });
+    expect(MOBS.mogger.enrage).toEqual({ belowHpPct: 0.30, dmgMult: 1.6 });
   });
 });
 
@@ -178,14 +329,47 @@ describe('the Hollow Crypt doors', () => {
   });
 });
 
+describe('dungeon instance placement and targetability', () => {
+  it('places every dungeon entry and mob spawn on unblocked instance ground', () => {
+    for (const dungeon of DUNGEON_LIST) {
+      const sim = makeSim();
+      sim.enterDungeon(dungeon.id);
+      const p = sim.player;
+      expect(p.pos.x, `${dungeon.id} entry is not inside an instance`).toBeGreaterThan(DUNGEON_X_THRESHOLD);
+      expect(isBlocked(SEED, p.pos.x, p.pos.z, 0.5), `${dungeon.id} entry spawned in geometry`).toBe(false);
+
+      const mobs = [...sim.entities.values()].filter((e) => e.kind === 'mob' && e.spawnPos.x > DUNGEON_X_THRESHOLD);
+      expect(mobs.length, `${dungeon.id} spawned no instance mobs`).toBeGreaterThan(0);
+      for (const mob of mobs) {
+        expect(mob.hostile, `${dungeon.id} ${mob.name} is not hostile`).toBe(true);
+        expect(sim.isHostileTo(sim.player, mob), `${dungeon.id} ${mob.name} is not targetable`).toBe(true);
+        expect(isBlocked(SEED, mob.pos.x, mob.pos.z, 0.5), `${dungeon.id} ${mob.name} spawned in geometry`).toBe(false);
+      }
+    }
+  });
+});
+
 describe('boss loot and encounter resets', () => {
-  it('Korzul and Velkhar always drop exactly one item from their three-way table', () => {
+  it('boss roll groups drop at most one item from each exclusive table', () => {
     const sim = makeSim();
     const meta = sim.meta(sim.playerId)!;
-    for (const bossId of ['korzul_the_gravewyrm', 'grand_necromancer_velkhar']) {
+    for (const [bossId, groupId, exactlyOne] of [
+      ['morthen', 'morthen_guaranteed_uncommon', true],
+      ['morthen', 'morthen_bonus', false],
+      ['knight_commander_olen', 'olen_guaranteed_uncommon', true],
+      ['knight_commander_olen', 'olen_bonus', false],
+      ['vael_the_mistcaller', 'vael_guaranteed_uncommon', true],
+      ['vael_the_mistcaller', 'vael_bonus', false],
+      ['korgath_the_bound', 'korgath_guaranteed_uncommon', true],
+      ['korgath_the_bound', 'korgath_bonus', false],
+      ['grand_necromancer_velkhar', 'velkhar_guaranteed_uncommon', true],
+      ['grand_necromancer_velkhar', 'velkhar_bonus', false],
+      ['korzul_the_gravewyrm', 'korzul_guaranteed_uncommon', true],
+      ['korzul_the_gravewyrm', 'korzul_bonus', false],
+    ] as const) {
       const template = MOBS[bossId];
-      const groupItems = template.loot.filter((l) => l.rollGroup).map((l) => l.itemId!);
-      expect(groupItems.length).toBe(3);
+      const groupItems = template.loot.filter((l) => l.rollGroup === groupId).map((l) => l.itemId!);
+      expect(groupItems.length).toBeGreaterThan(0);
       const mob = createMob(900000, template, 20, { x: 0, y: 0, z: 0 });
       // accessor defeats TS narrowing (mob.loot is assigned null in the loop)
       const lootOf = (m: Entity) => m.loot;
@@ -194,11 +378,137 @@ describe('boss loot and encounter resets', () => {
         mob.loot = null;
         (sim as any).rollLoot(mob, meta);
         const dropped = (lootOf(mob)?.items ?? []).filter((s) => groupItems.includes(s.itemId));
-        expect(dropped.length, `${bossId} kill #${i}`).toBe(1);
-        seen.add(dropped[0].itemId);
+        if (exactlyOne) {
+          expect(dropped.length, `${bossId}/${groupId} kill #${i}`).toBeGreaterThanOrEqual(1);
+          expect(dropped.length, `${bossId}/${groupId} kill #${i}`).toBeLessThanOrEqual(2);
+        }
+        else expect(dropped.length, `${bossId}/${groupId} kill #${i}`).toBeLessThanOrEqual(1);
+        if (dropped[0]) seen.add(dropped[0].itemId);
       }
-      expect([...seen].sort()).toEqual([...groupItems].sort()); // all three reachable
+      if (exactlyOne) expect([...seen].sort()).toEqual([...groupItems].sort()); // all three reachable
     }
+  });
+
+  it('dungeon bosses always drop gear but cap bonus quality drops', () => {
+    const sim = makeSim();
+    const meta = sim.meta(sim.playerId)!;
+    const lootOf = (m: Entity) => m.loot;
+    for (const bossId of [
+      'morthen',
+      'knight_commander_olen',
+      'vael_the_mistcaller',
+      'korgath_the_bound',
+      'grand_necromancer_velkhar',
+      'korzul_the_gravewyrm',
+    ]) {
+      const template = MOBS[bossId];
+      const mob = createMob(900010, template, template.maxLevel, { x: 0, y: 0, z: 0 });
+      for (let i = 0; i < 300; i++) {
+        mob.loot = null;
+        (sim as any).rollLoot(mob, meta);
+        const gear = (lootOf(mob)?.items ?? []).filter((s) => {
+          const q = ITEMS[s.itemId]?.quality;
+          return q === 'uncommon' || q === 'rare' || q === 'epic';
+        });
+        const uncommon = gear.filter((s) => ITEMS[s.itemId]?.quality === 'uncommon');
+        const premium = gear.filter((s) => {
+          const q = ITEMS[s.itemId]?.quality;
+          return q === 'rare' || q === 'epic';
+        });
+        expect(gear.length, bossId).toBeGreaterThanOrEqual(1);
+        expect(gear.length, bossId).toBeLessThanOrEqual(2);
+        expect(uncommon.length, bossId).toBeGreaterThanOrEqual(1);
+        expect(uncommon.length, bossId).toBeLessThanOrEqual(2);
+        expect(premium.length, bossId).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  it('uncommon and better corpse drops are rolled among nearby party members', () => {
+    const sim = makeSim();
+    const a = sim.playerId;
+    const b = sim.addPlayer('mage', 'Bert');
+    sim.partyInvite(b, a);
+    sim.partyAccept(b);
+    teleportTo(sim, 20, 20, a);
+    teleportTo(sim, 21, 20, b);
+    const mob = createMob(990100, MOBS.forest_wolf, 2, { x: 20, y: 0, z: 22 });
+    mob.dead = true;
+    mob.lootable = true;
+    mob.tappedById = a;
+    mob.loot = { copper: 0, items: [{ itemId: 'greyjaw_hide_boots', count: 1 }] };
+    sim.entities.set(mob.id, mob);
+
+    sim.events.length = 0;
+    sim.lootCorpse(mob.id, a);
+
+    const total =
+      sim.countItem('greyjaw_hide_boots', a) +
+      sim.countItem('greyjaw_hide_boots', b);
+    expect(total).toBe(1);
+    expect(sim.events.some((e) => e.type === 'loot' && e.text.includes('wins Greyjaw Hide Boots'))).toBe(true);
+    expect(mob.loot).toBeNull();
+  });
+
+  it('quest drops stay on the corpse as personal loot for every eligible nearby party member', () => {
+    const sim = makeSim();
+    const a = sim.playerId;
+    const b = sim.addPlayer('mage', 'Bert');
+    sim.partyInvite(b, a);
+    sim.partyAccept(b);
+    for (const pid of [a, b]) {
+      sim.meta(pid)!.questLog.set('q_boars', { questId: 'q_boars', counts: [0], state: 'active' });
+    }
+    const mob = createMob(990101, MOBS.wild_boar, 3, { x: 20, y: 0, z: 22 });
+    const boarHide = MOBS.wild_boar.loot.find((entry) => entry.itemId === 'boar_hide')!;
+    const oldChance = boarHide.chance;
+    boarHide.chance = 1;
+    try {
+      (sim as any).rollLoot(mob, sim.meta(a)!, [sim.meta(a)!, sim.meta(b)!]);
+    } finally {
+      boarHide.chance = oldChance;
+    }
+
+    expect(sim.countItem('boar_hide', a)).toBe(0);
+    expect(sim.countItem('boar_hide', b)).toBe(0);
+    expect(mob.loot?.items).toContainEqual({ itemId: 'boar_hide', count: 1, personalFor: [a, b] });
+
+    mob.dead = true;
+    mob.lootable = true;
+    mob.tappedById = a;
+    sim.entities.set(mob.id, mob);
+    teleportTo(sim, 20, 20, a);
+    teleportTo(sim, 21, 20, b);
+
+    sim.lootCorpse(mob.id, a);
+    expect(sim.countItem('boar_hide', a)).toBe(1);
+    expect(sim.countItem('boar_hide', b)).toBe(0);
+    expect(mob.lootable).toBe(true);
+    expect(mob.loot?.items).toContainEqual({ itemId: 'boar_hide', count: 1, personalFor: [b] });
+
+    sim.lootCorpse(mob.id, b);
+    expect(sim.countItem('boar_hide', b)).toBe(1);
+    expect(mob.loot).toBeNull();
+    expect(mob.lootable).toBe(false);
+  });
+
+  it('does not drop a quest-gated item whose quest has no matching collect objective', () => {
+    const sim = makeSim();
+    const a = sim.playerId;
+    // q_boars only collects boar_hide; it has no collect objective for greyjaw_fang.
+    sim.meta(a)!.questLog.set('q_boars', { questId: 'q_boars', counts: [0], state: 'active' });
+    const mob = createMob(990102, MOBS.wild_boar, 3, { x: 20, y: 0, z: 22 });
+    // Inject a (mis)configured drop gated on q_boars but for an item the quest
+    // does not collect. It must never drop, even at chance 1.
+    const bogus = { itemId: 'greyjaw_fang', chance: 1, questId: 'q_boars' };
+    MOBS.wild_boar.loot.push(bogus as any);
+    try {
+      (sim as any).rollLoot(mob, sim.meta(a)!, [sim.meta(a)!]);
+    } finally {
+      MOBS.wild_boar.loot.pop();
+    }
+    const dropped = (mob.loot?.items ?? []).some((slot) => slot.itemId === 'greyjaw_fang');
+    expect(dropped).toBe(false);
   });
 
   it('boss adds despawn on encounter reset instead of stacking across pulls', () => {
@@ -272,6 +582,21 @@ describe('quest npc roles', () => {
     for (let i = 0; i < 10 && sim.questState('q_fenbridge_muster') !== 'active'; i++) sim.talkToNpc(aldric.id);
     expect(sim.questState('q_fenbridge_muster')).toBe('active');
   });
+
+  it('cleanses hostile control auras from quest NPCs', () => {
+    const sim = makeSim('mage');
+    const redbrook = [...sim.entities.values()].find((e) => e.templateId === 'marshal_redbrook')!;
+    redbrook.auras.push({
+      id: 'polymorph', name: 'Polymorph', kind: 'polymorph',
+      remaining: 15, duration: 15, value: 0, tickInterval: 1, tickTimer: 1,
+      sourceId: sim.playerId, school: 'arcane', breaksOnDamage: true,
+    });
+
+    const events = sim.tick();
+
+    expect(redbrook.auras.some((a) => a.kind === 'polymorph')).toBe(false);
+    expect(events).toContainEqual({ type: 'aura', targetId: redbrook.id, name: 'Polymorph', gained: false });
+  });
 });
 
 describe('warrior charge', () => {
@@ -324,6 +649,93 @@ describe('warrior charge', () => {
     wolf.dead = true;
     sim.tick();
     expect(p.chargeTargetId).toBe(null);
+  });
+});
+
+describe('mob tap rights', () => {
+  function wolf(sim: Sim): Entity {
+    return [...sim.entities.values()].find((e) => e.kind === 'mob' && e.templateId === 'forest_wolf')!;
+  }
+
+  it('a hit that deals real damage claims the mob', () => {
+    const sim = makeSim('mage');
+    const m = wolf(sim);
+    expect(m.tappedById).toBeNull();
+    (sim as any).dealDamage(sim.player, m, 7, false, 'fire', 'test', 'hit');
+    expect(m.tappedById).toBe(sim.player.id);
+  });
+
+  it('a fully absorbed (zero-damage) hit does not claim the mob', () => {
+    const sim = makeSim('mage');
+    const m = wolf(sim);
+    // a shield that soaks the whole hit — the mob takes no real damage
+    m.auras.push({
+      id: 'test_absorb', name: 'Test Shield', kind: 'absorb',
+      remaining: 30, duration: 30, value: 1000, sourceId: m.id, school: 'arcane',
+    } as any);
+    const hpBefore = m.hp;
+    (sim as any).dealDamage(sim.player, m, 50, false, 'fire', 'test', 'hit');
+    expect(m.hp).toBe(hpBefore); // nothing got through
+    expect(m.tappedById).toBeNull(); // so nobody owns the tap yet
+  });
+});
+
+describe('pet heel warp', () => {
+  it('keeps the spatial grid exact when a pet warps to its owner', () => {
+    const sim = makeSim();
+    const p = sim.player;
+    // park the owner in open space away from the spawn camp
+    teleportTo(sim, p.pos.x + 400, p.pos.z + 400);
+
+    // adopt a wild beast as a heeling pet and strand it far from the owner
+    const pet = [...sim.entities.values()].find((e) => e.kind === 'mob' && !e.dead)!;
+    pet.ownerId = p.id;
+    pet.hostile = false;
+    pet.aggroTargetId = null;
+    pet.inCombat = false;
+    pet.pos = { x: p.pos.x + 200, z: p.pos.z, y: p.pos.y };
+    pet.prevPos = { ...pet.pos };
+    (sim as any).grid.update(pet); // grid now buckets the pet at its far cell
+
+    // 200 yds away with nothing to fight: the pet warps back to heel
+    (sim as any).updatePet(pet);
+    expect(dist2d(pet.pos, p.pos)).toBeLessThan(1);
+
+    // a same-tick radius query at the warp destination must see the pet — it
+    // would miss it if the grid still held the pet in its stale far-away cell
+    const found: number[] = [];
+    (sim as any).grid.forEachInRadius(p.pos.x, p.pos.z, 5, (e: Entity) => found.push(e.id));
+    expect(found).toContain(pet.id);
+  });
+});
+
+describe('aoe damage vs armor', () => {
+  // Armor mitigates physical damage only. The single-target path already
+  // gates armor on `!isSpell`; the AoE path must match so spell-school novas
+  // (Arcane Explosion, Consecration) ignore the target's armor like every
+  // other spell in the game.
+  function aoeSetup(ability: string) {
+    const sim = makeSim('mage');
+    (sim as any).grantXp(99999); // level up far past Arcane Explosion (lvl 14)
+    const p = sim.player;
+    const wolf = [...sim.entities.values()].find((e) => e.kind === 'mob' && e.templateId === 'forest_wolf' && !e.dead)!;
+    wolf.maxHp = 100000;
+    wolf.hp = 100000;
+    // huge armor pins armorReduction at its 0.75 cap — a mitigated arcane hit
+    // would land at <=8, well under the unmitigated 26-31 band.
+    wolf.stats.armor = 10_000_000;
+    teleportTo(sim, wolf.pos.x, wolf.pos.z + 1);
+    sim.targetEntity(wolf.id);
+    return { sim, p, wolf, ability };
+  }
+
+  it('arcane explosion ignores the target armor (spell school)', () => {
+    const { sim, wolf } = aoeSetup('arcane_explosion');
+    const before = wolf.hp;
+    sim.castAbility('arcane_explosion');
+    for (let i = 0; i < 3; i++) sim.tick();
+    // full unmitigated arcane damage is 26-31; mitigated would be <=8
+    expect(before - wolf.hp).toBeGreaterThanOrEqual(20);
   });
 });
 

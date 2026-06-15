@@ -51,6 +51,8 @@ export interface AccountRow {
   createdAt: string;
   lastLogin: string | null;
   isAdmin: boolean;
+  bannedAt: string | null;
+  suspendedUntil: string | null;
   characterCount: number;
   maxLevel: number;
   playtimeSeconds: number;
@@ -82,6 +84,9 @@ export interface AccountDetail {
   createdAt: string;
   lastLogin: string | null;
   isAdmin: boolean;
+  bannedAt: string | null;
+  suspendedUntil: string | null;
+  moderationReason: string;
   playtimeSeconds: number;
   characters: {
     id: number;
@@ -101,4 +106,44 @@ export interface AccountDetail {
     endedAt: string | null;
     seconds: number;
   }[];
+}
+
+export interface ModerationQueueRow {
+  accountId: number;
+  username: string;
+  status: 'active' | 'suspended' | 'banned';
+  suspendedUntil: string | null;
+  openReports: number;
+  latestReportAt: string;
+  latestReason: string;
+  characterNames: string[];
+  online: boolean;
+}
+
+export interface ReportDetail {
+  id: number;
+  reason: string;
+  details: string;
+  status: string;
+  createdAt: string;
+  reporterAccountId: number | null;
+  reporterUsername: string | null;
+  reporterCharacterId: number | null;
+  reporterCharacterName: string;
+  reportedAccountId: number;
+  reportedUsername: string;
+  reportedCharacterId: number | null;
+  reportedCharacterName: string;
+  chatContext: {
+    id: number;
+    characterName: string;
+    channel: string;
+    message: string;
+    createdAt: string;
+  }[];
+}
+
+export interface ModerationAccountDetail {
+  account: AccountDetail;
+  reports: ReportDetail[];
 }

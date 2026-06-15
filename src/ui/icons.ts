@@ -10,7 +10,7 @@
 
 import { ABILITIES, ITEMS } from '../sim/data';
 
-export type IconKind = 'ability' | 'item' | 'aura';
+export type IconKind = 'ability' | 'item' | 'aura' | 'crest';
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -1022,6 +1022,15 @@ const ITEM_RECIPES: Record<string, IconRecipe> = {
   greyjaw_pelt_cloak: r('leather', 'earthBrown', ['trousers', { p: 'paw', ...BR }]),
   baked_bread: r('food', 'gold', ['bread']),
   spring_water: r('drink', 'sky', [{ p: 'potion', pal: 'sky' }]),
+  simple_fishing_pole: r('wood', 'earthBrown', [
+    { p: 'staff', pal: 'earthBrown', rot: 0.7 },
+    { p: 'droplet', pal: 'sky', x: 14, y: 18, s: 0.45 },
+  ]),
+  raw_mirror_trout: r('drink', 'sky', [
+    { p: 'droplet', pal: 'sky', x: -4, y: 0, s: 1.1, rot: 1.55 },
+    { p: 'fang', pal: 'silverWhite', x: 18, y: -1, s: 0.45, rot: 1.55 },
+  ]),
+  tangled_weed: r('junk', 'venom', [{ p: 'tendrils', pal: 'venom' }]),
   roasted_boar: r('food', 'ember', ['meat']),
   conjured_water: r('arcane', 'sky', [{ p: 'potion', pal: 'sky' }], ['sparkle']),
   gravecaller_blade: r('shadow', 'steel', ['sword', { p: 'skull', ...BR }], ['glow']),
@@ -1071,6 +1080,49 @@ const AURA_RECIPES: Record<string, IconRecipe> = {
   aura_buff_allstats: r('arcane', 'arcanePink', ['gem']),
   aura_thorns: r('nature', 'leafGreen', ['leaf', { p: 'claw_slash', ...BR }]),
   aura_form_bear: r('earth', 'earthBrown', ['paw']),
+};
+
+// Crests: class / mob-family / status glyphs, painted with the same primitive
+// vocabulary so unit-frame portraits and party rows match the spellbook art
+// (replaces the old emoji FAMILY_GLYPH/CLASS_GLYPH; see docs/design/icon-system.md §10).
+const CREST_RECIPES: Record<string, IconRecipe> = {
+  // player classes (motif + class-flavoured background)
+  class_warrior: r('fury', 'steel', ['sword'], ['glow']),
+  class_paladin: r('holy', 'holyGold', ['mace'], ['glow']),
+  class_hunter: r('nature', 'leafGreen', ['arrow'], ['glow']),
+  class_rogue: r('shadow', 'steel', [{ p: 'dagger', x: -6, rot: -0.42 }, { p: 'dagger', x: 6, rot: 0.42 }], ['motion']),
+  class_priest: r('holy', 'silverWhite', ['cross'], ['glow', 'sparkle']),
+  class_shaman: r('storm', 'sky', ['lightning'], ['glow']),
+  class_mage: r('arcane', 'arcanePink', ['sigil_rune'], ['sparkle', 'glow']),
+  class_warlock: r('shadow', 'shadowPurple', ['skull'], ['glow']),
+  class_druid: r('nature', 'leafGreen', ['paw'], ['sparkle']),
+  // mob families
+  family_beast: r('earth', 'earthBrown', ['paw']),
+  family_humanoid: r('steel', 'steel', ['sword']),
+  family_murloc: r('drink', 'sky', ['droplet']),
+  family_spider: r('shadow', 'silverWhite', ['web']),
+  family_kobold: r('earth', 'gold', ['candle']),
+  family_undead: r('shadow', 'bone', ['skull']),
+  family_troll: r('junk', 'bone', ['bone']),
+  family_ogre: r('fury', 'earthBrown', ['fist']),
+  family_elemental: r('storm', 'sky', ['lightning'], ['glow']),
+  family_dragonkin: r('fire', 'ember', ['claw_slash'], ['glow']),
+  family_sheep: r('nature', 'silverWhite', ['sheep_head']),
+  // status / interaction markers
+  status_npc: r('parchment', 'gold', ['sigil_rune']),
+  status_boss: r('shadow', 'bone', ['skull'], ['glow']),
+  status_dead: r('junk', 'bone', ['skull']),
+  status_combat: r('fury', 'blood', ['sword']),
+  // talent-tree icons (used when a node has no linked ability — derived from its
+  // stat/global effect; see talentEffectIcon in hud.ts)
+  talent_armor: r('steel', 'steel', ['shield']),
+  talent_crit: r('fury', 'gold', ['sword', { p: 'sunburst', ...TL }]),
+  talent_dodge: r('storm', 'sky', ['shield'], ['motion']),
+  talent_ap: r('fury', 'gold', ['fist']),
+  talent_health: r('blood', 'blood', ['heart']),
+  talent_haste: r('storm', 'sky', ['lightning']),
+  talent_choice: r('arcane', 'arcanePink', ['gem'], ['sparkle']),
+  talent_generic: r('steel', 'steel', ['sigil_rune']),
 };
 
 // ---------------------------------------------------------------------------
@@ -1197,6 +1249,10 @@ function itemFallback(id: string): IconRecipe | null {
       ? r('drink', 'sky', [{ p: 'potion', pal: 'sky' }])
       : r('drink', 'sky', ['waterskin']);
   }
+  if (it.kind === 'tool') {
+    const prim: PrimitiveName = has(name, ['pole', 'rod', 'staff']) ? 'staff' : 'mace';
+    return r('wood', 'earthBrown', [prim], fx);
+  }
   const t = trinketPrimitive(name);
   return r(it.kind === 'quest' ? 'parchment' : 'junk', t.pal, [{ p: t.p, pal: t.pal }], fx);
 }
@@ -1301,6 +1357,8 @@ function resolveRecipe(kind: IconKind, id: string): IconRecipe {
     recipe = ABILITY_RECIPES[id] ?? abilityFallback(id);
   } else if (kind === 'item') {
     recipe = ITEM_RECIPES[id] ?? itemFallback(id);
+  } else if (kind === 'crest') {
+    recipe = CREST_RECIPES[id] ?? null;
   } else {
     // auras carry the ability id that applied them, or a generic aura_<kind>
     recipe = AURA_RECIPES[id] ?? ABILITY_RECIPES[id] ?? abilityFallback(id);
@@ -1316,13 +1374,135 @@ function resolveRecipe(kind: IconKind, id: string): IconRecipe {
 }
 
 const DEFAULT_ICON_SIZE = 96; // crisp at 46px buttons on 2x displays
+const canvasCache = new Map<string, HTMLCanvasElement>();
 
-// Returns a cached PNG data URL for the icon of the given ability/item/aura id.
+// Returns the cached composited <canvas> for an icon (ability/item/aura/crest).
+// Synchronous — safe to drawImage immediately (used for unit-frame portraits).
+export function iconCanvas(kind: IconKind, id: string, size: number = DEFAULT_ICON_SIZE): HTMLCanvasElement {
+  const key = `${kind}|${id}|${size}`;
+  let canvas = canvasCache.get(key);
+  if (!canvas) {
+    canvas = compose(resolveRecipe(kind, id), key, size);
+    canvasCache.set(key, canvas);
+  }
+  return canvas;
+}
+
+// Returns a cached PNG data URL for the icon of the given ability/item/aura/crest id.
 export function iconDataUrl(kind: IconKind, id: string, size: number = DEFAULT_ICON_SIZE): string {
   const key = `${kind}|${id}|${size}`;
   const cached = urlCache.get(key);
   if (cached) return cached;
-  const url = compose(resolveRecipe(kind, id), key, size).toDataURL();
+  const url = iconCanvas(kind, id, size).toDataURL();
   urlCache.set(key, url);
+  return url;
+}
+
+// ---------------------------------------------------------------------------
+// Raid / target markers (issue #105)
+//
+// Eight classic symbols (indexed 0..7) drawn flat and bold on a transparent
+// canvas — a dark outline behind each colored shape keeps them legible while
+// floating above mobs in the bright overworld. Unlike ability icons these have
+// no frame/background; contrast comes from the baked outline (+ a CSS shadow).
+// ---------------------------------------------------------------------------
+
+export const RAID_MARKER_NAMES = ['Star', 'Circle', 'Diamond', 'Triangle', 'Moon', 'Square', 'Cross', 'Skull'] as const;
+export const RAID_MARKER_COUNT = RAID_MARKER_NAMES.length;
+const RAID_MARKER_FILL = ['#ffe23a', '#ff8a2a', '#d24bff', '#37d72c', '#cfe6ff', '#23b5ff', '#ff3b30', '#f4f4f4'];
+const RAID_MARKER_OUTLINE = '#0d0d12';
+const RAID_MARKER_PX = 64;
+const raidMarkerCache = new Map<number, string>();
+
+function raidStarPath(ctx: Ctx): void {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const rr = i % 2 === 0 ? 42 : 17;
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const x = Math.cos(a) * rr, y = Math.sin(a) * rr;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+}
+
+function raidSkullPath(ctx: Ctx): void {
+  ctx.beginPath();
+  ctx.arc(0, -10, 30, Math.PI, 0, false); // cranium dome
+  ctx.lineTo(30, 6);
+  ctx.quadraticCurveTo(30, 20, 16, 23);
+  ctx.lineTo(13, 35);
+  ctx.quadraticCurveTo(0, 41, -13, 35); // chin
+  ctx.lineTo(-16, 23);
+  ctx.quadraticCurveTo(-30, 20, -30, 6);
+  ctx.closePath();
+}
+
+// Outline a single closed path, then fill it — the centered stroke leaves a
+// crisp dark border once the fill paints over its inner half.
+function raidStrokeFill(ctx: Ctx, fill: string): void {
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 9;
+  ctx.strokeStyle = RAID_MARKER_OUTLINE;
+  ctx.stroke();
+  ctx.fillStyle = fill;
+  ctx.fill();
+}
+
+function drawRaidMarker(ctx: Ctx, idx: number): void {
+  const fill = RAID_MARKER_FILL[idx] ?? '#ffffff';
+  switch (idx) {
+    case 0: // star
+      raidStarPath(ctx); raidStrokeFill(ctx, fill); break;
+    case 1: // circle
+      ctx.beginPath(); ctx.arc(0, 0, 37, 0, TAU); raidStrokeFill(ctx, fill); break;
+    case 2: // diamond
+      ctx.beginPath(); ctx.moveTo(0, -42); ctx.lineTo(38, 0); ctx.lineTo(0, 42); ctx.lineTo(-38, 0); ctx.closePath();
+      raidStrokeFill(ctx, fill); break;
+    case 3: // triangle
+      ctx.beginPath(); ctx.moveTo(0, -40); ctx.lineTo(38, 32); ctx.lineTo(-38, 32); ctx.closePath();
+      raidStrokeFill(ctx, fill); break;
+    case 4: { // moon — a dark crescent with a slightly inset colored one on top
+      const crescent = (outerR: number, carveX: number, carveR: number): void => {
+        ctx.beginPath();
+        ctx.arc(-4, 0, outerR, 0, TAU, false);
+        ctx.arc(carveX, 0, carveR, 0, TAU, true); // opposite winding carves a bite
+      };
+      crescent(40, 20, 40); ctx.fillStyle = RAID_MARKER_OUTLINE; ctx.fill();
+      crescent(34, 23, 40); ctx.fillStyle = fill; ctx.fill();
+      break;
+    }
+    case 5: // square
+      ctx.beginPath(); ctx.rect(-34, -34, 68, 68); raidStrokeFill(ctx, fill); break;
+    case 6: // cross (X) — two round-capped bars, wide dark pass then colored pass
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-28, -28); ctx.lineTo(28, 28); ctx.moveTo(28, -28); ctx.lineTo(-28, 28);
+      ctx.lineWidth = 28; ctx.strokeStyle = RAID_MARKER_OUTLINE; ctx.stroke();
+      ctx.lineWidth = 16; ctx.strokeStyle = fill; ctx.stroke();
+      break;
+    case 7: // skull
+      raidSkullPath(ctx); raidStrokeFill(ctx, fill);
+      ctx.fillStyle = RAID_MARKER_OUTLINE;
+      ctx.beginPath(); ctx.ellipse(-12, -7, 8, 9, 0, 0, TAU); ctx.fill(); // left eye
+      ctx.beginPath(); ctx.ellipse(12, -7, 8, 9, 0, 0, TAU); ctx.fill(); // right eye
+      ctx.beginPath(); ctx.moveTo(0, 3); ctx.lineTo(5, 14); ctx.lineTo(-5, 14); ctx.closePath(); ctx.fill(); // nose
+      break;
+    default:
+      ctx.beginPath(); ctx.arc(0, 0, 36, 0, TAU); raidStrokeFill(ctx, fill);
+  }
+}
+
+// Cached transparent-background PNG data URL for raid marker `idx` (0..7).
+export function raidMarkerDataUrl(idx: number): string {
+  const cached = raidMarkerCache.get(idx);
+  if (cached) return cached;
+  const canvas = document.createElement('canvas');
+  canvas.width = RAID_MARKER_PX;
+  canvas.height = RAID_MARKER_PX;
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(RAID_MARKER_PX / 100, RAID_MARKER_PX / 100);
+  ctx.translate(50, 50);
+  drawRaidMarker(ctx, idx);
+  const url = canvas.toDataURL();
+  raidMarkerCache.set(idx, url);
   return url;
 }

@@ -6,6 +6,7 @@ import {
   MOBS, ABILITIES, DUNGEON_X_THRESHOLD, DUNGEON_LIST, QUESTS,
   instanceOrigin, INSTANCE_SLOT_COUNT, ARENA_SLOT_COUNT, arenaOrigin, isArenaPos, dungeonAt,
 } from '../sim/data';
+import { ARENA_LAYOUT, DUNGEON_WALL_X } from '../sim/dungeon_layout';
 import type { BiomeId } from '../sim/types';
 import { AnimState, CharacterVisual, createCharacterVisual } from './characters';
 import { LocoTrack, newLocoTrack, updateLocomotion } from './locomotion';
@@ -21,6 +22,9 @@ import { buildTerrain, TerrainView } from './terrain';
 import { buildWater, WaterView } from './water';
 import { buildClouds, buildSky, SkyView } from './sky';
 import { buildFoliage, FoliageView } from './foliage';
+import { shouldRenderStealthGhost } from './stealth';
+import { raidMarkerDataUrl } from '../ui/icons';
+import { isProjectedNameplateAnchorVisible } from './nameplate_projection';
 
 const NAMEPLATE_RANGE = 55;
 // Entities further than this from the player are hidden entirely: their rigs
@@ -75,6 +79,7 @@ interface EntityView {
   hpBar: HTMLDivElement;
   hpFill: HTMLDivElement;
   markerEl: HTMLDivElement;
+  raidMarkEl: HTMLDivElement; // party raid/target marker, above the name
   sparkle?: THREE.Sprite; // ground objects
   objectMesh?: THREE.Object3D;
   portal?: THREE.Mesh; // dungeon door swirl
@@ -143,6 +148,7 @@ export class Renderer {
   private lowGfx: boolean;
   private post: PostPipeline | null = null;
   private godRays: THREE.Sprite[] = [];
+  private viewport = { width: 1, height: 1 };
 
   constructor(private sim: IWorld, canvas: HTMLCanvasElement, nameplateLayer: HTMLDivElement) {
     this.nameplateLayer = nameplateLayer;
@@ -154,13 +160,14 @@ export class Renderer {
     initGfxTier(this.webgl); // software-GL autodetect needs the live context
     this.lowGfx = GFX.tier === 'low';
     const LOW_GFX = this.lowGfx;
+    this.viewport = this.measureViewport();
     this.webgl.setPixelRatio(Math.min(window.devicePixelRatio, GFX.pixelRatioCap));
-    this.webgl.setSize(window.innerWidth, window.innerHeight);
+    this.webgl.setSize(this.viewport.width, this.viewport.height, false);
     this.webgl.shadowMap.enabled = !LOW_GFX;
     this.webgl.shadowMap.type = THREE.PCFSoftShadowMap;
     this.webgl.toneMapping = THREE.ACESFilmicToneMapping; // OutputPass reads this on the composer path
     this.webgl.toneMappingExposure = this.baseExposure;
-    this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 950);
+    this.camera = new THREE.PerspectiveCamera(60, this.viewport.width / this.viewport.height, 0.1, 950);
 
     this.scene.fog = new THREE.Fog(0xa6c6e0, 130, 470);
 
@@ -331,25 +338,47 @@ export class Renderer {
     for (const e of sim.entities.values()) this.createView(e);
 
     // post chain (bloom + grade, GTAO on ultra); low renders direct
-    if (GFX.composer) this.post = buildComposer(this.webgl, this.scene, this.camera);
+    if (GFX.composer) this.post = buildComposer(this.webgl, this.scene, this.camera, this.viewport.width, this.viewport.height);
 
-    window.addEventListener('resize', () => {
-      this.camera.aspect = window.innerWidth / window.innerHeight;
-      this.camera.updateProjectionMatrix();
-      this.applyResolution();
+    const resize = () => this.resizeViewport();
+    window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', () => {
+      resize();
+      window.setTimeout(resize, 250);
+      window.setTimeout(resize, 800);
     });
+    window.visualViewport?.addEventListener('resize', resize);
+    window.visualViewport?.addEventListener('scroll', resize);
+    document.addEventListener('fullscreenchange', resize);
+  }
+
+  private measureViewport(): { width: number; height: number } {
+    const rect = this.webgl.domElement.getBoundingClientRect();
+    const stableMobileGameViewport = document.body.classList.contains('game-active') && document.body.classList.contains('mobile-touch');
+    const vv = stableMobileGameViewport ? null : window.visualViewport;
+    const width = Math.round(stableMobileGameViewport ? (rect.width || window.innerWidth) : (vv?.width ?? (rect.width || window.innerWidth)));
+    const height = Math.round(stableMobileGameViewport ? (rect.height || window.innerHeight) : (vv?.height ?? (rect.height || window.innerHeight)));
+    return { width: Math.max(1, width), height: Math.max(1, height) };
+  }
+
+  private resizeViewport(): void {
+    this.viewport = this.measureViewport();
+    this.camera.aspect = this.viewport.width / this.viewport.height;
+    this.camera.updateProjectionMatrix();
+    this.applyResolution();
   }
 
   // Push the current device pixel ratio (× renderScale, still capped by the
   // tier) to the renderer, composer, and vfx. Shared by resize and the
   // render-scale setting so a window resize never drops the chosen scale.
   private applyResolution(): void {
+    this.viewport = this.measureViewport();
     const ratio = Math.min(window.devicePixelRatio, GFX.pixelRatioCap) * this.renderScale;
     this.webgl.setPixelRatio(ratio);
-    this.webgl.setSize(window.innerWidth, window.innerHeight);
+    this.webgl.setSize(this.viewport.width, this.viewport.height, false);
     if (this.post) {
       this.post.composer.setPixelRatio(ratio);
-      this.post.setSize(window.innerWidth, window.innerHeight);
+      this.post.setSize(this.viewport.width, this.viewport.height);
     }
     this.vfx.setViewportScale(this.webgl.domElement.clientHeight * this.webgl.getPixelRatio(), 60);
   }
@@ -535,6 +564,9 @@ export class Renderer {
     // nameplate
     const np = document.createElement('div');
     np.className = 'nameplate';
+    const raidMark = document.createElement('div');
+    raidMark.className = 'np-raidmark';
+    raidMark.style.display = 'none';
     const marker = document.createElement('div');
     marker.className = 'np-marker';
     const nameEl = document.createElement('div');
@@ -545,7 +577,7 @@ export class Renderer {
     const hpFill = document.createElement('div');
     hpFill.className = 'np-hpfill';
     hpBar.appendChild(hpFill);
-    np.append(marker, nameEl, hpBar);
+    np.append(raidMark, marker, nameEl, hpBar);
     this.nameplateLayer.appendChild(np);
 
     // object views gate their own casters; character shadows live in visual
@@ -553,7 +585,7 @@ export class Renderer {
     if (!visual) collectCasters(group, objectCasters);
     this.views.set(e.id, {
       group, visual, sheepVisual: null, bearVisual: null, height, clickTarget,
-      nameplate: np, nameEl, hpBar, hpFill, markerEl: marker, sparkle, objectMesh, portal,
+      nameplate: np, nameEl, hpBar, hpFill, markerEl: marker, raidMarkEl: raidMark, sparkle, objectMesh, portal,
       objectCasters, shadowOn: true, isFar: false,
       lastX: e.pos.x, lastZ: e.pos.z,
       loco: newLocoTrack(),
@@ -728,6 +760,10 @@ export class Renderer {
   }
 
   sync(alpha: number, dt: number, renderFacingOverride: number | null): void {
+    const measured = this.measureViewport();
+    if (measured.width !== this.viewport.width || measured.height !== this.viewport.height) {
+      this.resizeViewport();
+    }
     this.time += dt;
     sharedUniforms.uTime.value = this.time;
     const sim = this.sim;
@@ -755,6 +791,7 @@ export class Renderer {
       // the shadow gates below must not run the base rig's proxy under a form
       const polyed = e.auras.some((a) => a.kind === 'polymorph');
       const bear = !polyed && e.auras.some((a) => a.kind === 'form_bear');
+      const stealthed = e.auras.some((a) => a.kind === 'stealth');
       // distance cull: far rigs are invisible specks but cost real draw calls
       const cdx = e.pos.x - p.pos.x, cdz = e.pos.z - p.pos.z;
       const d2 = cdx * cdx + cdz * cdz;
@@ -837,6 +874,8 @@ export class Renderer {
       if (v.bearVisual) v.bearVisual.root.visible = bear;
       const active = polyed && v.sheepVisual ? v.sheepVisual
         : bear && v.bearVisual ? v.bearVisual : v.visual;
+      const ghost = shouldRenderStealthGhost(this.sim.playerId, e);
+      active.setGhost(ghost);
       v.visual.root.visible = active === v.visual;
       // distant rigs swap to the single-draw baked idle-pose mesh
       v.visual.setFar(v.isFar && active === v.visual);
@@ -1013,18 +1052,28 @@ export class Renderer {
     const py = p.prevPos.y + (p.pos.y - p.prevPos.y) * alpha;
     const pz = p.prevPos.z + (p.pos.z - p.prevPos.z) * alpha;
     const eyeY = py + 2.0;
-    const cx = px - Math.sin(this.camYaw) * Math.cos(this.camPitch) * this.camDist;
+    let cx = px - Math.sin(this.camYaw) * Math.cos(this.camPitch) * this.camDist;
     const cy = eyeY + Math.sin(this.camPitch) * this.camDist;
-    const cz = pz - Math.cos(this.camYaw) * Math.cos(this.camPitch) * this.camDist;
+    let cz = pz - Math.cos(this.camYaw) * Math.cos(this.camPitch) * this.camDist;
+    // The Ashen Coliseum is a small enclosed pit and the combatants spawn only
+    // ~6yd from the end walls, so the 12yd chase cam would otherwise sit outside
+    // the walls looking in. Keep it inside the room's interior box.
+    if (isArenaPos(p.pos.x)) {
+      const o = arenaOriginAt(p.pos.z);
+      const m = 2; // clearance from the wall faces
+      cx = Math.min(Math.max(cx, o.x - DUNGEON_WALL_X + m), o.x + DUNGEON_WALL_X - m);
+      cz = Math.min(Math.max(cz, o.z + ARENA_LAYOUT.zMin + m), o.z + ARENA_LAYOUT.zMax - m);
+    }
     const groundY = groundHeight(cx, cz, this.sim.cfg.seed) + 0.6;
     this.camera.position.set(cx, Math.max(cy, groundY), cz);
     this.camera.lookAt(px, eyeY, pz);
+    this.camera.updateMatrixWorld();
   }
 
   private updateNameplates(): void {
     const sim = this.sim;
     const p = sim.player;
-    const w = window.innerWidth, h = window.innerHeight;
+    const { width: w, height: h } = this.viewport;
     for (const e of sim.entities.values()) {
       const v = this.views.get(e.id);
       if (!v) continue;
@@ -1042,12 +1091,25 @@ export class Renderer {
       }
       this.tmpV.copy(v.group.position);
       this.tmpV.y += v.height * e.scale + 0.5;
+      if (!isProjectedNameplateAnchorVisible(this.camera, this.tmpV, this.tmpV2)) {
+        v.nameplate.style.display = 'none';
+        continue;
+      }
       this.tmpV.project(this.camera);
-      if (this.tmpV.z > 1) { v.nameplate.style.display = 'none'; continue; }
+      if (this.tmpV.z < -1 || this.tmpV.z > 1) { v.nameplate.style.display = 'none'; continue; }
       const sx = (this.tmpV.x * 0.5 + 0.5) * w;
       const sy = (-this.tmpV.y * 0.5 + 0.5) * h;
       v.nameplate.style.display = '';
       v.nameplate.style.transform = `translate(${sx.toFixed(0)}px, ${sy.toFixed(0)}px) translate(-50%, -100%)`;
+
+      // party raid/target marker (only mobs are markable, so this is null elsewhere)
+      const raidMark = this.sim.markerFor(e.id);
+      if (raidMark !== null) {
+        v.raidMarkEl.style.backgroundImage = `url(${raidMarkerDataUrl(raidMark)})`;
+        v.raidMarkEl.style.display = '';
+      } else {
+        v.raidMarkEl.style.display = 'none';
+      }
 
       if (e.kind === 'object') {
         // dungeon doorways announce themselves
@@ -1059,6 +1121,7 @@ export class Renderer {
         // other players: friendly blue with an hp bar
         v.nameEl.style.color = '#7fb8ff';
         v.nameEl.textContent = `${e.name}`;
+        v.nameplate.style.opacity = e.auras.some((a) => a.kind === 'stealth') ? '0.55' : '1';
         v.hpBar.style.display = e.dead ? 'none' : '';
         v.hpFill.style.width = `${(100 * e.hp / Math.max(1, e.maxHp)).toFixed(1)}%`;
         v.markerEl.textContent = '';
@@ -1114,7 +1177,7 @@ export class Renderer {
 
   private updateChatBubbles(): void {
     if (this.chatBubbles.size === 0) return;
-    const w = window.innerWidth, h = window.innerHeight;
+    const { width: w, height: h } = this.viewport;
     const now = performance.now();
     for (const [id, b] of this.chatBubbles) {
       const e = this.sim.entities.get(id);
@@ -1130,8 +1193,12 @@ export class Renderer {
       if (v.group.visible) this.tmpV.copy(v.group.position);
       else this.tmpV.set(e.pos.x, e.pos.y, e.pos.z);
       this.tmpV.y += v.height * e.scale + 1.0;
+      if (!isProjectedNameplateAnchorVisible(this.camera, this.tmpV, this.tmpV2)) {
+        b.el.style.display = 'none';
+        continue;
+      }
       this.tmpV.project(this.camera);
-      if (this.tmpV.z > 1) { b.el.style.display = 'none'; continue; }
+      if (this.tmpV.z < -1 || this.tmpV.z > 1) { b.el.style.display = 'none'; continue; }
       b.el.style.display = '';
       const sx = (this.tmpV.x * 0.5 + 0.5) * w;
       const sy = (-this.tmpV.y * 0.5 + 0.5) * h;
@@ -1139,10 +1206,24 @@ export class Renderer {
     }
   }
 
-  pick(clientX: number, clientY: number): number | null {
+  // Click-to-move (#95): where a screen click meets the ground. Intersects a
+  // horizontal plane at the player's foot height — robust on the gentle terrain
+  // here and far cheaper than raycasting the terrain mesh.
+  groundPoint(clientX: number, clientY: number, planeY: number): { x: number; z: number } | null {
     const ndc = new THREE.Vector2(
       (clientX / window.innerWidth) * 2 - 1,
       -(clientY / window.innerHeight) * 2 + 1,
+    );
+    this.raycaster.setFromCamera(ndc, this.camera);
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -planeY);
+    const hit = new THREE.Vector3();
+    return this.raycaster.ray.intersectPlane(plane, hit) ? { x: hit.x, z: hit.z } : null;
+  }
+
+  pick(clientX: number, clientY: number): number | null {
+    const ndc = new THREE.Vector2(
+      (clientX / this.viewport.width) * 2 - 1,
+      -(clientY / this.viewport.height) * 2 + 1,
     );
     this.raycaster.setFromCamera(ndc, this.camera);
     const hits = this.raycaster.intersectObjects(this.clickTargets, true);
@@ -1173,8 +1254,8 @@ export class Renderer {
       this.tmpV.y += v.height * e.scale * 0.5;
       this.tmpV.project(this.camera);
       if (this.tmpV.z > 1) continue;
-      const sx = (this.tmpV.x * 0.5 + 0.5) * window.innerWidth;
-      const sy = (-this.tmpV.y * 0.5 + 0.5) * window.innerHeight;
+      const sx = (this.tmpV.x * 0.5 + 0.5) * this.viewport.width;
+      const sy = (-this.tmpV.y * 0.5 + 0.5) * this.viewport.height;
       const d = Math.hypot(sx - clientX, sy - clientY);
       if (d < bestD) {
         bestD = d;
@@ -1187,8 +1268,8 @@ export class Renderer {
   worldToScreen(x: number, y: number, z: number): { x: number; y: number; behind: boolean } {
     this.tmpV.set(x, y, z).project(this.camera);
     return {
-      x: (this.tmpV.x * 0.5 + 0.5) * window.innerWidth,
-      y: (-this.tmpV.y * 0.5 + 0.5) * window.innerHeight,
+      x: (this.tmpV.x * 0.5 + 0.5) * this.viewport.width,
+      y: (-this.tmpV.y * 0.5 + 0.5) * this.viewport.height,
       behind: this.tmpV.z > 1,
     };
   }

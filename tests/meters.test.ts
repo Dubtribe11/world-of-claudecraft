@@ -70,4 +70,15 @@ describe('combat meters', () => {
     expect(m.current).not.toBeNull();
     expect(m.current!.tallies.size).toBe(0);
   });
+
+  it('can tally controlled pet damage when the HUD includes the pet in the party set', () => {
+    const w = fakeWorld();
+    const party = new Set([1, 2, 3]);
+    (w.entities as Map<number, any>).set(3, { id: 3, kind: 'mob', name: 'Wolf Pet', templateId: 'forest_wolf', ownerId: 1 });
+    const m = new MeterData(0);
+    m.onEvent(dmg(3, 50, 18), w, party, 1000);
+    expect(m.current).not.toBeNull();
+    expect(m.current!.tallies.get(3)!.name).toBe('Wolf Pet');
+    expect(m.current!.tallies.get(3)!.dmg).toBe(18);
+  });
 });

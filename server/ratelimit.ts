@@ -66,6 +66,74 @@ export function rateLimited(req: http.IncomingMessage, maxPerMinute = 20): boole
   const list = (attempts.get(ip) ?? []).filter((t) => t > windowStart);
   const updated = [...list, now];
   attempts.set(ip, updated);
-  if (attempts.size > MAX_TRACKED_IPS) attempts.clear(); // memory backstop
+  // Memory backstop: when the map grows too large, evict entries whose window
+  // has fully expired rather than clearing everything. A blanket clear() would
+  // also wipe the counter we just recorded, so every IP would perpetually see
+  // a single attempt and rate limiting would silently stop working under load.
+  if (attempts.size > MAX_TRACKED_IPS) {
+    for (const [key, times] of attempts) {
+      if (key === ip) continue;
+      if (times.length === 0 || times[times.length - 1] <= windowStart) {
+        attempts.delete(key);
+      }
+      if (attempts.size <= MAX_TRACKED_IPS) break;
+    }
+  }
   return updated.length > maxPerMinute;
+}
+
+// ---------------------------------------------------------------------------
+// Per-account failed-login throttle (#93)
+//
+// The per-IP limiter above can't stop credential stuffing: a botnet spreads
+// guesses for one account across thousands of IPs, each well under the IP cap.
+// This tracks FAILED login attempts keyed by username, so brute-forcing a
+// single account is throttled regardless of source IP. Successful logins clear
+// the counter, so a legitimate user who finally types the right password isn't
+// punished for earlier typos.
+const AUTH_FAIL_WINDOW_MS = 15 * 60_000; // 15 minutes
+const MAX_AUTH_FAILURES = 10; // per account per window
+const authFailures = new Map<string, number[]>();
+
+// Normalize so 'Alice', 'alice', and ' alice ' share one bucket and can't be
+// used to multiply the allowance against the same account.
+function authKey(username: string): string {
+  return username.trim().toLowerCase();
+}
+
+/** True once an account has hit the failed-attempt ceiling within the window. */
+export function authThrottled(username: string): boolean {
+  const key = authKey(username);
+  const windowStart = Date.now() - AUTH_FAIL_WINDOW_MS;
+  const recent = (authFailures.get(key) ?? []).filter((t) => t > windowStart);
+  if (recent.length > 0) authFailures.set(key, recent); else authFailures.delete(key);
+  return recent.length >= MAX_AUTH_FAILURES;
+}
+
+/** Record a failed login for an account (call on bad password / unknown user). */
+export function recordAuthFailure(username: string): void {
+  const key = authKey(username);
+  const windowStart = Date.now() - AUTH_FAIL_WINDOW_MS;
+  const recent = (authFailures.get(key) ?? []).filter((t) => t > windowStart);
+  recent.push(Date.now());
+  authFailures.set(key, recent);
+  // Memory backstop: evict only accounts whose window has fully expired rather
+  // than clearing everything. A blanket clear() would also wipe the live
+  // lockout counters we are accumulating against accounts under attack — which
+  // is exactly when a credential-stuffing flood inflates this map past the cap,
+  // silently disabling the per-account throttle. Mirrors rateLimited() above.
+  if (authFailures.size > MAX_TRACKED_IPS) {
+    for (const [k, times] of authFailures) {
+      if (k === key) continue;
+      if (times.length === 0 || times[times.length - 1] <= windowStart) {
+        authFailures.delete(k);
+      }
+      if (authFailures.size <= MAX_TRACKED_IPS) break;
+    }
+  }
+}
+
+/** Clear an account's failure history after a successful login. */
+export function clearAuthFailures(username: string): void {
+  authFailures.delete(authKey(username));
 }

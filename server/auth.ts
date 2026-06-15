@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
+import { RegExpMatcher, englishDataset, englishRecommendedTransformers } from 'obscenity';
 
 const SCRYPT_N = 16384, SCRYPT_R = 8, SCRYPT_P = 1, KEYLEN = 64;
 
@@ -45,6 +46,15 @@ const CONFUSABLE_CHARS: Record<string, string> = {
   '8': 'b',
 };
 
+const profanityMatcher = new RegExpMatcher({
+  ...englishDataset.build(),
+  ...englishRecommendedTransformers,
+});
+
+const BUILT_IN_BANNED_NAME_TERMS = parseBanlist([
+  'hitler',
+].join('\n'));
+
 function normalizedUsernameForCensorship(username: string): string {
   return username
     .toLowerCase()
@@ -59,26 +69,49 @@ function parseBanlist(raw: string | undefined): string[] {
     .filter((term) => term.length > 0);
 }
 
+let banlistCacheKey: string | null = null;
+let banlistCacheTerms: string[] = [];
+
 function bannedUsernameTerms(): string[] {
-  const terms = parseBanlist(process.env.USERNAME_BANLIST);
-  const file = process.env.USERNAME_BANLIST_FILE;
-  if (!file) return terms;
+  const rawList = process.env.USERNAME_BANLIST ?? '';
+  const file = process.env.USERNAME_BANLIST_FILE ?? '';
+  const cacheKey = `${rawList}\0${file}`;
+  if (cacheKey === banlistCacheKey) return banlistCacheTerms;
+
+  const terms = BUILT_IN_BANNED_NAME_TERMS.concat(parseBanlist(rawList));
+  if (!file) {
+    banlistCacheTerms = terms;
+    banlistCacheKey = cacheKey;
+    return banlistCacheTerms;
+  }
   try {
-    return terms.concat(parseBanlist(readFileSync(file, 'utf8')));
+    banlistCacheTerms = terms.concat(parseBanlist(readFileSync(file, 'utf8')));
   } catch (err) {
     console.warn(`could not read USERNAME_BANLIST_FILE (${file}):`, err);
     return terms;
   }
+  banlistCacheKey = cacheKey;
+  return banlistCacheTerms;
 }
 
 export function offensiveUsername(u: unknown): boolean {
+  return offensiveName(u);
+}
+
+export function offensiveName(u: unknown): boolean {
   if (typeof u !== 'string') return false;
   const normalized = normalizedUsernameForCensorship(u);
-  return bannedUsernameTerms().some((term) => normalized.includes(term));
+  return profanityMatcher.hasMatch(u) ||
+    profanityMatcher.hasMatch(normalized) ||
+    bannedUsernameTerms().some((term) => normalized.includes(term));
 }
 
 export function validUsername(u: unknown): u is string {
-  return typeof u === 'string' && /^[A-Za-z0-9_]{3,24}$/.test(u) && !offensiveUsername(u);
+  return validUsernameShape(u) && !offensiveName(u);
+}
+
+export function validUsernameShape(u: unknown): u is string {
+  return typeof u === 'string' && /^[A-Za-z0-9_]{3,24}$/.test(u);
 }
 
 export function validPassword(p: unknown): p is string {
@@ -86,5 +119,21 @@ export function validPassword(p: unknown): p is string {
 }
 
 export function validCharName(n: unknown): n is string {
+  return validCharNameShape(n) && !offensiveName(n);
+}
+
+export function validCharNameShape(n: unknown): n is string {
   return typeof n === 'string' && /^[A-Za-z][A-Za-z' -]{1,15}$/.test(n);
+}
+
+// Server-side canonical form for a character name: trim the ends and collapse
+// any interior whitespace run to a single space. The browser already trims
+// before sending, but the server is the authority — a direct API client must
+// not be able to store a padded name (e.g. "Bob "), which would then fail to
+// match the typed, unpadded form in findCharacterByName. Returns the cleaned
+// name, or null if it is not a valid character name once normalized.
+export function normalizeCharName(n: unknown): string | null {
+  if (typeof n !== 'string') return null;
+  const cleaned = n.trim().replace(/\s+/g, ' ');
+  return validCharNameShape(cleaned) ? cleaned : null;
 }

@@ -31,6 +31,7 @@ export const ZONE1_ZONE: ZoneDef = {
     { x: 80, z: 80, label: 'Fallen Chapel' },
   ],
   welcome: 'Find Marshal Redbrook in town — he has work for you.',
+  welcomeQuestId: 'q_wolves',
 };
 
 // ---------------------------------------------------------------------------
@@ -70,6 +71,23 @@ export const ZONE1_MOBS: Record<string, MobTemplate> = {
     ],
     scale: 0.85, color: 0x935116,
   },
+  elder_bristleback: {
+    id: 'elder_bristleback', name: 'Elder Bristleback', minLevel: 5, maxLevel: 5, family: 'beast', rare: true,
+    elite: true, canSwim: true, ccImmune: true, respawnMult: 432,
+    hpBase: 260, hpPerLevel: 52, dmgBase: 11, dmgPerLevel: 3.3, attackSpeed: 2.4,
+    armorPerLevel: 30, moveSpeed: 7.2, aggroRadius: 12,
+    aoePulse: { min: 12, max: 18, radius: 8, every: 9, name: 'Bristleback Stomp', school: 'physical' },
+    enrage: { belowHpPct: 0.35, dmgMult: 1.4 },
+    loot: [
+      { copper: 120, chance: 1 },
+      { itemId: 'tough_jerky', chance: 1 },
+      { itemId: 'bristleback_maul', chance: 0.25 },
+      { itemId: 'moggers_copper_cudgel', chance: 0.25, rollGroup: 'elder_bristleback_chase' },
+      { itemId: 'hollowbone_hauberk', chance: 0.25, rollGroup: 'elder_bristleback_chase' },
+      { itemId: 'hollowbound_legguards', chance: 0.25, rollGroup: 'elder_bristleback_chase' },
+    ],
+    scale: 1.2, color: 0x7b3f13,
+  },
   webwood_spider: {
     id: 'webwood_spider', name: 'Webwood Lurker', minLevel: 2, maxLevel: 4, family: 'spider',
     hpBase: 30, hpPerLevel: 15, dmgBase: 4, dmgPerLevel: 1.7, attackSpeed: 1.8,
@@ -80,6 +98,54 @@ export const ZONE1_MOBS: Record<string, MobTemplate> = {
       { itemId: 'spider_leg', chance: 0.4 },
     ],
     scale: 0.9, color: 0x4a235a,
+  },
+  sableweb_matriarch: {
+    id: 'sableweb_matriarch', name: 'Sableweb Matriarch', minLevel: 6, maxLevel: 6, family: 'spider', rare: true,
+    elite: true, canSwim: true, ccImmune: true, respawnMult: 432,
+    hpBase: 250, hpPerLevel: 50, dmgBase: 11, dmgPerLevel: 3.3, attackSpeed: 1.7,
+    armorPerLevel: 20, moveSpeed: 8, aggroRadius: 12,
+    aoePulse: { min: 10, max: 16, radius: 10, every: 8, name: 'Venom Spray', school: 'nature' },
+    summonAdds: { mobId: 'sableweb_hatchling', count: 2, atHpPct: [0.60, 0.30] },
+    loot: [
+      { copper: 130, chance: 1 },
+      { itemId: 'spider_leg', chance: 1 },
+      { itemId: 'sableweb_slippers', chance: 0.25 },
+      { itemId: 'valeborn_spellblade', chance: 0.25, rollGroup: 'sableweb_matriarch_chase' },
+      { itemId: 'gravewoven_raiment', chance: 0.25, rollGroup: 'sableweb_matriarch_chase' },
+      { itemId: 'gravepath_treads', chance: 0.25, rollGroup: 'sableweb_matriarch_chase' },
+    ],
+    scale: 1.15, color: 0x1b1025,
+  },
+  sableweb_hatchling: {
+    id: 'sableweb_hatchling', name: 'Sableweb Hatchling', minLevel: 5, maxLevel: 5, family: 'spider',
+    hpBase: 34, hpPerLevel: 13, dmgBase: 5, dmgPerLevel: 1.8, attackSpeed: 1.6,
+    armorPerLevel: 8, moveSpeed: 8.5, aggroRadius: 12,
+    loot: [],
+    scale: 0.65, color: 0x21112d,
+  },
+  mogger: {
+    id: 'mogger', name: 'Mogger', minLevel: 6, maxLevel: 6, family: 'humanoid', rare: true,
+    elite: true, canSwim: true, ccImmune: true, respawnMult: 4,
+    hpBase: 300, hpPerLevel: 58, dmgBase: 12, dmgPerLevel: 3.5, attackSpeed: 2.2,
+    armorPerLevel: 34, moveSpeed: 7.4, aggroRadius: 14,
+    aoePulse: { min: 14, max: 20, radius: 8, every: 10, name: 'Ground Pound', school: 'physical' },
+    summonAdds: { mobId: 'mogger_lackey', count: 2, atHpPct: [0.70] },
+    enrage: { belowHpPct: 0.30, dmgMult: 1.6 },
+    loot: [
+      { copper: 180, chance: 1 },
+      { itemId: 'linen_scrap', chance: 1 },
+      { itemId: 'moggers_stomper_boots', chance: 0.3 },
+      { itemId: 'moggers_shiv', chance: 0.25, rollGroup: 'mogger_chase' },
+      { itemId: 'cryptstalker_jerkin', chance: 0.25, rollGroup: 'mogger_chase' },
+    ],
+    scale: 1.28, color: 0x8e5b33,
+  },
+  mogger_lackey: {
+    id: 'mogger_lackey', name: 'Mogger Lackey', minLevel: 5, maxLevel: 6, family: 'humanoid',
+    hpBase: 44, hpPerLevel: 18, dmgBase: 6, dmgPerLevel: 2.0, attackSpeed: 2.0,
+    armorPerLevel: 18, moveSpeed: 7.5, aggroRadius: 12,
+    loot: [],
+    scale: 0.95, color: 0x7b4b2b,
   },
   mudfin_murloc: {
     id: 'mudfin_murloc', name: 'Mudfin Skulker', minLevel: 3, maxLevel: 5, family: 'murloc',
@@ -135,6 +201,7 @@ export const ZONE1_MOBS: Record<string, MobTemplate> = {
       { itemId: 'bandit_bandana', chance: 1 },
       { itemId: 'oiled_boots', chance: 0.5 },
       { itemId: 'quilted_trousers', chance: 0.5 },
+      { itemId: 'gorraks_cruel_chopper', chance: 0.25 },
     ],
     scale: 1.25, color: 0x6c3483,
   },
@@ -156,14 +223,14 @@ export const ZONE1_NPCS: Record<string, NpcDef> = {
   marshal_redbrook: {
     id: 'marshal_redbrook', name: 'Marshal Redbrook', title: 'Town Marshal',
     pos: { x: 4, z: 6 }, facing: Math.PI, color: 0xb7950b,
-    questIds: ['q_wolves', 'q_greyjaw', 'q_bandits', 'q_ringleader'],
+    questIds: ['q_wolves', 'q_greyjaw', 'q_bandits', 'q_ringleader', 'q_mogger_tracks', 'q_mogger'],
     greeting: 'Keep your blade close, $C. The Vale is not what it was.',
   },
   trader_wilkes: {
     id: 'trader_wilkes', name: 'Trader Wilkes', title: 'Provisioner',
     pos: { x: -7, z: 3 }, facing: Math.PI / 2, color: 0x1e8449,
     questIds: ['q_boars', 'q_supplies'],
-    vendorItems: ['baked_bread', 'spring_water', 'roasted_boar', 'tough_jerky'],
+    vendorItems: ['baked_bread', 'spring_water', 'roasted_boar', 'tough_jerky', 'minor_healing_potion', 'minor_mana_potion'],
     greeting: 'Fresh bread, clean water, fair prices. What can I get you?',
   },
   apothecary_lin: {
@@ -199,6 +266,7 @@ export const ZONE1_NPCS: Record<string, NpcDef> = {
     // walking up to a quest giver
     pos: { x: -16, z: 6 }, facing: -0.75, color: 0x2471a3,
     questIds: ['q_murlocs'],
+    vendorItems: ['simple_fishing_pole'],
     greeting: 'Grlmurlgrl— sorry, been listening to those fish-men too long.',
   },
   foreman_odell: {
@@ -380,6 +448,28 @@ export const ZONE1_QUESTS: Record<string, QuestDef> = {
     itemRewards: { warrior: 'militia_vest', mage: 'woven_robe', rogue: 'shadow_jerkin' },
     requiresQuest: 'q_bandits',
   },
+  q_mogger_tracks: {
+    id: 'q_mogger_tracks', name: "Mogger's Trail",
+    giverNpcId: 'marshal_redbrook', turnInNpcId: 'marshal_redbrook',
+    text: "Before you take the road north, Eastbrook has one last thorn in its side: Mogger. The brute has been trampling the lower meadow and driving the boars mad. Clear the meadow around his trail so we can see where he lairs.",
+    completionText: "Those tracks are fresh and deep enough to hold rain. Mogger is no camp tale, $N — and he is close.",
+    objectives: [{ type: 'kill', targetMobId: 'wild_boar', count: 8, label: 'Wild Boar driven from the trail' }],
+    xpReward: 650, copperReward: 350, itemRewards: {},
+    requiresQuest: 'q_gravecallers_trail',
+    minLevel: 6,
+  },
+  q_mogger: {
+    id: 'q_mogger', name: 'Mogger Must Fall',
+    giverNpcId: 'marshal_redbrook', turnInNpcId: 'marshal_redbrook',
+    text: 'Mogger has split carts, flattened fences, and killed enough livestock to empty half the Vale. Do not face him alone. Take two strong companions into the eastern meadow and put the brute down for good.',
+    completionText: "Mogger dead at last. Eastbrook's fields are safer, and you leave the Vale with one more tale worth retelling.",
+    objectives: [{ type: 'kill', targetMobId: 'mogger', count: 1, label: 'Mogger slain' }],
+    xpReward: 1200, copperReward: 900,
+    itemRewards: { warrior: 'bristleback_maul', mage: 'sableweb_slippers', rogue: 'moggers_stomper_boots' },
+    requiresQuest: 'q_mogger_tracks',
+    minLevel: 6,
+    suggestedPlayers: 3,
+  },
 };
 
 export const ZONE1_QUEST_ORDER = [
@@ -387,6 +477,7 @@ export const ZONE1_QUEST_ORDER = [
   'q_supplies', 'q_bandits', 'q_mine', 'q_bones', 'q_ringleader',
   'q_whispers', 'q_names_of_the_dead', 'q_silence_the_call',
   'q_rite', 'q_sexton', 'q_hollow', 'q_gravecallers_trail',
+  'q_mogger_tracks', 'q_mogger',
 ];
 
 // ---------------------------------------------------------------------------
@@ -403,8 +494,11 @@ export const ZONE1_CAMPS: CampDef[] = [
   // Boars: east meadow
   { mobId: 'wild_boar', center: { x: 55, z: 12 }, radius: 22, count: 6 },
   { mobId: 'wild_boar', center: { x: 80, z: -15 }, radius: 18, count: 5 },
+  { mobId: 'elder_bristleback', center: { x: 104, z: 24 }, radius: 4, count: 1 },
+  { mobId: 'mogger', center: { x: 118, z: -26 }, radius: 5, count: 1 },
   // Spiders: western woods
   { mobId: 'webwood_spider', center: { x: -60, z: 5 }, radius: 22, count: 7 },
+  { mobId: 'sableweb_matriarch', center: { x: -72, z: 28 }, radius: 5, count: 1 },
   // Murlocs: lake shore northwest — camp straddles the waterline
   { mobId: 'mudfin_murloc', center: { x: -75, z: 57 }, radius: 14, count: 8 },
   // Kobolds: mine southwest

@@ -1,4 +1,5 @@
-import { INTERACT_RANGE, dist2d } from '../sim/types';
+import { INTERACT_RANGE, dist2d, Entity } from '../sim/types';
+import type { HoverCursorKind } from './cursors';
 import type { IWorld } from '../world_api';
 
 export interface PickInteractionWorld {
@@ -16,6 +17,23 @@ export interface PickInteractionHud {
   openQuestDialog(npcId: number): void;
   showError(text: string): void;
   closeContextMenu(): void;
+}
+
+export function isAttackHoverTarget(e: Entity | undefined): boolean {
+  return hoverCursorKind(e, -1, new Set()) === 'attack';
+}
+
+/** Which game cursor to show when hovering an entity. */
+export function hoverCursorKind(
+  e: Entity | undefined,
+  playerId: number,
+  partyMemberIds: ReadonlySet<number>,
+): HoverCursorKind {
+  if (!e) return 'default';
+  if (e.kind === 'mob' && !e.dead && e.hostile) return 'attack';
+  if (e.kind === 'npc') return 'friendly';
+  if (e.kind === 'player' && e.id !== playerId && partyMemberIds.has(e.id)) return 'friendly';
+  return 'default';
 }
 
 export function handlePickedEntity(

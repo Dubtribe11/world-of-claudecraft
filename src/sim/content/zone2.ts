@@ -73,6 +73,30 @@ export const ZONE2_MOBS: Record<string, MobTemplate> = {
     ],
     scale: 0.85, color: 0x45b39d,
   },
+  mirejaw_the_ravenous: {
+    id: 'mirejaw_the_ravenous', name: 'Mirejaw the Ravenous', minLevel: 10, maxLevel: 10, family: 'murloc', rare: true,
+    elite: true, canSwim: true, ccImmune: true, respawnMult: 648,
+    hpBase: 320, hpPerLevel: 58, dmgBase: 15, dmgPerLevel: 3.7, attackSpeed: 1.8,
+    armorPerLevel: 26, moveSpeed: 8.2, aggroRadius: 14,
+    aoePulse: { min: 18, max: 26, radius: 10, every: 9, name: 'Ravenous Frenzy', school: 'nature' },
+    summonAdds: { mobId: 'mirejaw_frenzy', count: 2, atHpPct: [0.55] },
+    loot: [
+      { copper: 260, chance: 1 },
+      { itemId: 'mudfin_scale', chance: 1 },
+      { itemId: 'mirejaw_biteblade', chance: 0.25 },
+      { itemId: 'mirejaw_scale_vest', chance: 0.25 },
+      { itemId: 'fen_reaver_glaive', chance: 0.25, rollGroup: 'mirejaw_chase' },
+      { itemId: 'mirejaw_oracle_staff', chance: 0.25, rollGroup: 'mirejaw_chase' },
+    ],
+    scale: 1.05, color: 0x1abc9c,
+  },
+  mirejaw_frenzy: {
+    id: 'mirejaw_frenzy', name: 'Mirejaw Frenzy', minLevel: 9, maxLevel: 10, family: 'murloc',
+    hpBase: 48, hpPerLevel: 18, dmgBase: 8, dmgPerLevel: 2.2, attackSpeed: 1.7,
+    armorPerLevel: 12, moveSpeed: 8.5, aggroRadius: 14,
+    loot: [],
+    scale: 0.75, color: 0x1abc9c,
+  },
   mire_widow: {
     id: 'mire_widow', name: 'Mirefen Widow', minLevel: 8, maxLevel: 10, family: 'spider',
     hpBase: 48, hpPerLevel: 19, dmgBase: 8, dmgPerLevel: 2.2, attackSpeed: 1.8,
@@ -91,6 +115,7 @@ export const ZONE2_MOBS: Record<string, MobTemplate> = {
     loot: [
       { copper: 300, chance: 1 },
       { itemId: 'marshstrider_boots', chance: 0.4 },
+      { itemId: 'broodmother_silk_robe', chance: 0.25 },
       { itemId: 'spider_leg', chance: 1 },
     ],
     scale: 1.4, color: 0x641e16,
@@ -150,6 +175,28 @@ export const ZONE2_MOBS: Record<string, MobTemplate> = {
     ],
     scale: 1.0, color: 0x884ea0,
   },
+  sister_nhalia: {
+    id: 'sister_nhalia', name: 'Sister Nhalia', minLevel: 12, maxLevel: 12, family: 'humanoid', rare: true,
+    elite: true, canSwim: true, ccImmune: true, respawnMult: 648,
+    hpBase: 330, hpPerLevel: 60, dmgBase: 16, dmgPerLevel: 3.8, attackSpeed: 2.0,
+    armorPerLevel: 30, moveSpeed: 7, aggroRadius: 13,
+    aoePulse: { min: 18, max: 26, radius: 11, every: 9, name: 'Dirge of Nhalia', school: 'shadow' },
+    summonAdds: { mobId: 'nhalia_mourner', count: 2, atHpPct: [0.65, 0.35] },
+    loot: [
+      { copper: 350, chance: 1 },
+      { itemId: 'tallow_candle', chance: 1 },
+      { itemId: 'nhalias_funeral_wraps', chance: 0.25 },
+      { itemId: 'nhalias_dirgeblade', chance: 0.25, rollGroup: 'sister_nhalia_chase' },
+    ],
+    scale: 1.08, color: 0x3b1f4a,
+  },
+  nhalia_mourner: {
+    id: 'nhalia_mourner', name: 'Nhalia Mourner', minLevel: 11, maxLevel: 12, family: 'humanoid',
+    hpBase: 46, hpPerLevel: 17, dmgBase: 8, dmgPerLevel: 2.3, attackSpeed: 2.0,
+    armorPerLevel: 14, moveSpeed: 7, aggroRadius: 12,
+    loot: [],
+    scale: 0.95, color: 0x332044,
+  },
   deacon_voss: {
     id: 'deacon_voss', name: 'Deacon Voss', minLevel: 12, maxLevel: 12, family: 'humanoid',
     hpBase: 200, hpPerLevel: 30, dmgBase: 11, dmgPerLevel: 2.5, attackSpeed: 2.4,
@@ -158,6 +205,7 @@ export const ZONE2_MOBS: Record<string, MobTemplate> = {
     loot: [
       { copper: 600, chance: 1 },
       { itemId: 'tallow_candle', chance: 1 },
+      { itemId: 'voss_sanctified_mace', chance: 0.25 },
     ],
     scale: 1.3, color: 0x512e5f,
   },
@@ -442,6 +490,7 @@ export const ZONE2_CAMPS: CampDef[] = [
   // Murlocs: shores of the big east lake — camps straddle the waterline
   { mobId: 'deepfen_murloc', center: { x: -82, z: 273 }, radius: 15, count: 8 },
   { mobId: 'deepfen_murloc', center: { x: -120, z: 350 }, radius: 13, count: 6 },
+  { mobId: 'mirejaw_the_ravenous', center: { x: -132, z: 333 }, radius: 5, count: 1 },
   // Widows: thicket west of Fenbridge
   { mobId: 'mire_widow', center: { x: 70, z: 300 }, radius: 20, count: 7 },
   { mobId: 'mire_widow', center: { x: 95, z: 340 }, radius: 16, count: 6 },
@@ -457,6 +506,7 @@ export const ZONE2_CAMPS: CampDef[] = [
   { mobId: 'gravecaller_cultist', center: { x: 15, z: 470 }, radius: 20, count: 7 },
   { mobId: 'gravecaller_cultist', center: { x: -25, z: 490 }, radius: 16, count: 6 },
   { mobId: 'gravecaller_summoner', center: { x: -5, z: 500 }, radius: 12, count: 4 },
+  { mobId: 'sister_nhalia', center: { x: 24, z: 492 }, radius: 5, count: 1 },
   { mobId: 'deacon_voss', center: { x: 0, z: 510 }, radius: 2, count: 1 },
 ];
 
@@ -544,6 +594,38 @@ export const ZONE2_ITEMS: Record<string, ItemDef> = {
     id: 'marshstrider_boots', name: 'Marshstrider Boots', kind: 'armor', slot: 'feet', quality: 'uncommon',
     stats: { armor: 40, agi: 2, sta: 2 }, sellValue: 250,
   },
+  broodmother_silk_robe: {
+    id: 'broodmother_silk_robe', name: "Broodmother's Silk Robe", kind: 'armor', slot: 'chest', quality: 'uncommon',
+    stats: { armor: 42, int: 4, spi: 2 }, sellValue: 300, requiredClass: MAG,
+  },
+  voss_sanctified_mace: {
+    id: 'voss_sanctified_mace', name: "Voss's Sanctified Mace", kind: 'weapon', slot: 'mainhand', quality: 'uncommon',
+    weapon: { min: 12, max: 20, speed: 2.6 }, stats: { int: 3, spi: 2 }, sellValue: 420, requiredClass: MAG,
+  },
+  mirejaw_biteblade: {
+    id: 'mirejaw_biteblade', name: 'Mirejaw Biteblade', kind: 'weapon', slot: 'mainhand', quality: 'uncommon',
+    weapon: { min: 8, max: 14, speed: 1.7, dagger: true }, stats: { agi: 5, sta: 2 }, sellValue: 480, requiredClass: ROG,
+  },
+  mirejaw_scale_vest: {
+    id: 'mirejaw_scale_vest', name: 'Mirejaw Scale Vest', kind: 'armor', slot: 'chest', quality: 'uncommon',
+    stats: { armor: 115, str: 2, sta: 3 }, sellValue: 480, requiredClass: WAR,
+  },
+  nhalias_funeral_wraps: {
+    id: 'nhalias_funeral_wraps', name: "Nhalia's Funeral Wraps", kind: 'armor', slot: 'legs', quality: 'uncommon',
+    stats: { armor: 48, int: 5, spi: 2 }, sellValue: 480, requiredClass: MAG,
+  },
+  fen_reaver_glaive: {
+    id: 'fen_reaver_glaive', name: 'Fen Reaver Glaive', kind: 'weapon', slot: 'mainhand', quality: 'rare',
+    weapon: { min: 16, max: 26, speed: 2.4 }, stats: { str: 5, sta: 3 }, sellValue: 1400, requiredClass: WAR,
+  },
+  nhalias_dirgeblade: {
+    id: 'nhalias_dirgeblade', name: "Nhalia's Dirgeblade", kind: 'weapon', slot: 'mainhand', quality: 'rare',
+    weapon: { min: 10, max: 16, speed: 1.7, dagger: true }, stats: { agi: 6, sta: 3 }, sellValue: 1400, requiredClass: ROG,
+  },
+  mirejaw_oracle_staff: {
+    id: 'mirejaw_oracle_staff', name: 'Mirejaw Oracle Staff', kind: 'weapon', slot: 'mainhand', quality: 'rare',
+    weapon: { min: 16, max: 27, speed: 3.0 }, stats: { int: 6, spi: 3 }, sellValue: 1400, requiredClass: MAG,
+  },
   // --- Sunken Bastion blues (rare) ---
   mistcallers_edge: {
     id: 'mistcallers_edge', name: "Mistcaller's Edge", kind: 'weapon', slot: 'mainhand', quality: 'rare',
@@ -564,6 +646,30 @@ export const ZONE2_ITEMS: Record<string, ItemDef> = {
   tidescale_vest: {
     id: 'tidescale_vest', name: 'Tidescale Vest', kind: 'armor', slot: 'chest', quality: 'rare',
     stats: { armor: 90, sta: 3, agi: 2 }, sellValue: 1100,
+  },
+  tideguard_greaves: {
+    id: 'tideguard_greaves', name: 'Tideguard Greaves', kind: 'armor', slot: 'legs', quality: 'rare',
+    stats: { armor: 125, str: 3, sta: 5 }, sellValue: 1100, requiredClass: WAR,
+  },
+  tideguard_sabatons: {
+    id: 'tideguard_sabatons', name: 'Tideguard Sabatons', kind: 'armor', slot: 'feet', quality: 'rare',
+    stats: { armor: 105, str: 2, sta: 4 }, sellValue: 1100, requiredClass: WAR,
+  },
+  drowned_prayer_leggings: {
+    id: 'drowned_prayer_leggings', name: 'Drowned Prayer Leggings', kind: 'armor', slot: 'legs', quality: 'rare',
+    stats: { armor: 48, int: 6, spi: 4 }, sellValue: 1100, requiredClass: MAG,
+  },
+  drowned_prayer_sandals: {
+    id: 'drowned_prayer_sandals', name: 'Drowned Prayer Sandals', kind: 'armor', slot: 'feet', quality: 'rare',
+    stats: { armor: 42, int: 5, spi: 3 }, sellValue: 1100, requiredClass: MAG,
+  },
+  eelscale_leggings: {
+    id: 'eelscale_leggings', name: 'Eelscale Leggings', kind: 'armor', slot: 'legs', quality: 'rare',
+    stats: { armor: 86, agi: 6, sta: 3 }, sellValue: 1100, requiredClass: ROG,
+  },
+  eelscale_treads: {
+    id: 'eelscale_treads', name: 'Eelscale Treads', kind: 'armor', slot: 'feet', quality: 'rare',
+    stats: { armor: 72, agi: 5, sta: 3 }, sellValue: 1100, requiredClass: ROG,
   },
   // --- vendor food & drink (Provisioner Hale) ---
   fenbridge_rye: {

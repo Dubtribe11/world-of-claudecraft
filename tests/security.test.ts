@@ -1,12 +1,12 @@
 import { EventEmitter } from 'node:events';
-import { rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { buildWebSocketAuthMessage, buildWebSocketUrl } from '../src/net/online';
 import { Sim } from '../src/sim/sim';
-import { offensiveUsername, validCharName, validUsername } from '../server/auth';
-import { rateLimited, requestIp } from '../server/ratelimit';
+import { normalizeCharName, offensiveName, offensiveUsername, validCharName, validUsername } from '../server/auth';
+import { rateLimited, requestIp, authThrottled, recordAuthFailure, clearAuthFailures } from '../server/ratelimit';
 
 function fakeReq(headers: Record<string, string>, remoteAddress: string) {
   const req: any = new EventEmitter();
@@ -110,6 +110,80 @@ describe('rate-limit client IP selection', () => {
     // ...while another player behind the same proxy is unaffected
     expect(rateLimited(fakeReq({ 'x-forwarded-for': '198.51.100.201' }, '172.18.0.1'))).toBe(false);
   });
+
+  it('keeps limiting a persistent attacker after the memory backstop evicts', () => {
+    // A persistent attacker keeps hammering one endpoint while the IP map is
+    // pushed past its backstop threshold by churning many one-off IPs. The
+    // backstop must evict expired one-off entries, NOT wipe the attacker's
+    // live counter — otherwise flooding the map silently disables rate limiting.
+    const attacker = '203.0.113.250';
+    let limited = false;
+    for (let i = 0; i < 25; i++) {
+      limited = rateLimited(fakeReq({ 'x-forwarded-for': attacker }, '172.18.0.1'));
+    }
+    expect(limited).toBe(true);
+
+    // Churn past MAX_TRACKED_IPS (10_000) distinct clients to trip the backstop.
+    for (let i = 0; i < 10_050; i++) {
+      const a = (i >> 8) & 0xff;
+      const b = i & 0xff;
+      rateLimited(fakeReq({ 'x-forwarded-for': `100.64.${a}.${b}` }, '172.18.0.1'));
+    }
+
+    // The attacker's counter must survive eviction and stay limited.
+    expect(rateLimited(fakeReq({ 'x-forwarded-for': attacker }, '172.18.0.1'))).toBe(true);
+  });
+});
+
+describe('per-account failed-login throttle (#93)', () => {
+  it('throttles an account after repeated failed logins, regardless of source IP', () => {
+    const user = 'victim_account';
+    expect(authThrottled(user)).toBe(false);
+    // a credential-stuffing botnet hammers one account from many IPs
+    for (let i = 0; i < 10; i++) {
+      expect(authThrottled(user)).toBe(false); // still allowed to try
+      recordAuthFailure(user);
+    }
+    expect(authThrottled(user)).toBe(true); // now locked out for the window
+  });
+
+  it('is case/whitespace-insensitive so the same account cannot be split into buckets', () => {
+    for (let i = 0; i < 10; i++) recordAuthFailure('  CaseUser ');
+    expect(authThrottled('caseuser')).toBe(true);
+    expect(authThrottled('CASEUSER')).toBe(true);
+  });
+
+  it('clears failures after a successful login so honest typos are forgiven', () => {
+    const user = 'butterfingers';
+    for (let i = 0; i < 9; i++) recordAuthFailure(user);
+    expect(authThrottled(user)).toBe(false); // one under the ceiling
+    clearAuthFailures(user); // correct password on the next try
+    for (let i = 0; i < 9; i++) recordAuthFailure(user);
+    expect(authThrottled(user)).toBe(false); // counter started fresh
+  });
+
+  it('keeps separate accounts independent', () => {
+    for (let i = 0; i < 10; i++) recordAuthFailure('account_a');
+    expect(authThrottled('account_a')).toBe(true);
+    expect(authThrottled('account_b')).toBe(false);
+  });
+
+  it('keeps an account locked out after the memory backstop evicts', () => {
+    // A credential-stuffing flood spreads guesses across thousands of accounts,
+    // pushing the failure map past its backstop threshold. The backstop must
+    // evict expired one-off entries, NOT wipe the live lockout counter for an
+    // account actively under attack — otherwise flooding silently disables the
+    // per-account throttle exactly when it is needed most.
+    const victim = 'lockme_account';
+    for (let i = 0; i < 10; i++) recordAuthFailure(victim);
+    expect(authThrottled(victim)).toBe(true);
+
+    // Churn past MAX_TRACKED_IPS (10_000) distinct accounts to trip the backstop.
+    for (let i = 0; i < 10_050; i++) recordAuthFailure(`throwaway_${i}`);
+
+    // The victim's lockout must survive eviction.
+    expect(authThrottled(victim)).toBe(true);
+  });
 });
 
 describe('malformed websocket frames cannot crash the server', () => {
@@ -143,6 +217,36 @@ describe('malformed websocket frames cannot crash the server', () => {
 
   it('still accepts a well-formed object frame', () => {
     expect(parseFrame(JSON.stringify({ t: 'input', mi: { f: 1 } }))).toEqual({ t: 'input', mi: { f: 1 } });
+  });
+});
+
+describe('character name normalization', () => {
+  // The server is the authority: it must not trust the browser to strip
+  // whitespace. A direct API client could otherwise store padded names that
+  // then become un-befriendable (findCharacterByName won't match the typed,
+  // unpadded form).
+  it('trims surrounding whitespace and collapses interior runs', () => {
+    expect(normalizeCharName('  Bob  Smith ')).toBe('Bob Smith');
+    expect(normalizeCharName('Thrall')).toBe('Thrall');
+    expect(normalizeCharName('Bob \t Smith')).toBe('Bob Smith');
+  });
+
+  it('returns null for names that are invalid even after normalizing', () => {
+    expect(normalizeCharName('  ')).toBeNull();
+    expect(normalizeCharName('A')).toBeNull(); // too short
+    expect(normalizeCharName('123Adventurer')).toBeNull();
+    expect(normalizeCharName(42)).toBeNull();
+  });
+
+  it('preserves valid punctuation while normalizing whitespace', () => {
+    expect(normalizeCharName("  Kael'thas ")).toBe("Kael'thas");
+    expect(normalizeCharName('Rexxar-Misha')).toBe('Rexxar-Misha');
+  });
+
+  it('a normalized name always passes validCharName', () => {
+    const n = normalizeCharName('  Bob  Smith ');
+    expect(n).not.toBeNull();
+    expect(validCharName(n)).toBe(true);
   });
 });
 
@@ -186,6 +290,22 @@ describe('username censorship', () => {
     });
   });
 
+  it('rejects profanity detected by the built-in username filter', () => {
+    withUsernameBanlist({}, () => {
+      expect(offensiveName('fuuuck')).toBe(true);
+      expect(validUsername('fuuuck')).toBe(false);
+    });
+  });
+
+  it('rejects built-in policy-banned name terms and obvious variants', () => {
+    withUsernameBanlist({}, () => {
+      expect(validUsername('Hitler')).toBe(false);
+      expect(validUsername('H1tler')).toBe(false);
+      expect(validCharName('H i t l e r')).toBe(false);
+      expect(validCharName('Adolf')).toBe(true);
+    });
+  });
+
   it('can load banned username terms from a configured file', () => {
     const file = join(tmpdir(), `woc-banlist-${Date.now()}-${Math.random().toString(16).slice(2)}.txt`);
     writeFileSync(file, 'forbidden\n');
@@ -196,5 +316,70 @@ describe('username censorship', () => {
     } finally {
       rmSync(file, { force: true });
     }
+  });
+
+  it('caches file-backed banned terms until banlist env changes', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'woc-banlist-'));
+    const firstFile = join(dir, 'first.txt');
+    const secondFile = join(dir, 'second.txt');
+    writeFileSync(firstFile, 'fileterm\n');
+    writeFileSync(secondFile, 'otherterm\n');
+
+    try {
+      withUsernameBanlist({ file: firstFile }, () => {
+        expect(offensiveName('fileterm')).toBe(true);
+        writeFileSync(firstFile, 'changedterm\n');
+        expect(offensiveName('fileterm')).toBe(true);
+        expect(offensiveName('changedterm')).toBe(false);
+
+        process.env.USERNAME_BANLIST_FILE = secondFile;
+        expect(offensiveName('fileterm')).toBe(false);
+        expect(offensiveName('otherterm')).toBe(true);
+
+        delete process.env.USERNAME_BANLIST_FILE;
+        expect(offensiveName('otherterm')).toBe(false);
+      });
+    } finally {
+      rmSync(dir, { force: true, recursive: true });
+    }
+  });
+
+  it('retries file-backed banned terms after a failed read', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'woc-banlist-missing-'));
+    const missingFile = join(dir, 'missing.txt');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    try {
+      withUsernameBanlist({ file: missingFile }, () => {
+        expect(offensiveName('laterterm')).toBe(false);
+        expect(warn).toHaveBeenCalledOnce();
+
+        writeFileSync(missingFile, 'laterterm\n');
+        expect(offensiveName('laterterm')).toBe(true);
+      });
+    } finally {
+      warn.mockRestore();
+      rmSync(dir, { force: true, recursive: true });
+    }
+  });
+});
+
+describe('character name censorship', () => {
+  it('rejects profanity in character names', () => {
+    withUsernameBanlist({}, () => {
+      expect(validCharName('Fuuuck')).toBe(false);
+    });
+  });
+
+  it('normalizes separators before checking character names', () => {
+    withUsernameBanlist({ inline: 'biga' }, () => {
+      expect(validCharName('B I G A')).toBe(false);
+    });
+  });
+
+  it('applies configured banned username terms to character names too', () => {
+    withUsernameBanlist({ inline: 'gravecaller' }, () => {
+      expect(validCharName('Grave Caller')).toBe(false);
+    });
   });
 });

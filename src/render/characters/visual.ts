@@ -37,6 +37,7 @@ const SWIM_PITCH_CLIP = 0.35;
 const SWIM_PITCH_PROCEDURAL = 1.18;
 const SWIM_RISE = 0.95; // body must break the surface or only the hat floats
 const MIXER_DT_CAP = 0.3; // throttled entities never integrate a huge step
+const GHOST_OPACITY = 0.34;
 
 // shared invisible click capsule — raycaster ignores `visible`, render doesn't
 let clickGeoSingleton: THREE.CylinderGeometry | null = null;
@@ -76,8 +77,11 @@ export class CharacterVisual {
   private modelWrap = new THREE.Group();
   private poseWrap = new THREE.Group();
   private farMesh: THREE.Mesh | null = null;
+  private farMaterials: THREE.Material | THREE.Material[] | null = null;
   private shadowProxy: THREE.Mesh | null = null;
   private casters: THREE.Mesh[] = [];
+  private originalMaterials = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
+  private ghostMaterials = new Map<THREE.Material, THREE.Material>();
 
   private baseState: BaseState = 'idle';
   private current: THREE.AnimationAction | null = null;
@@ -102,6 +106,10 @@ export class CharacterVisual {
     // model: yaw/scale/feet normalization wrapper around the skinned clone
     this.model = assembleModel(prep.def);
     applyMaterials(this.model, prep.def, entityColor);
+    this.model.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (mesh.isMesh) this.originalMaterials.set(mesh, mesh.material);
+    });
     this.modelWrap.rotation.y = prep.def.yaw ?? 0;
     this.modelWrap.scale.setScalar(prep.normScale);
     this.modelWrap.position.y = prep.yOffset;
@@ -123,6 +131,7 @@ export class CharacterVisual {
     // far LOD + shadow proxy share the baked idle-pose geometry per key
     if (prep.idleGeo) {
       this.farMesh = new THREE.Mesh(prep.idleGeo, tintedFarMaterials(prep.def, entityColor, prep.idleSrcMats));
+      this.farMaterials = this.farMesh.material;
       this.farMesh.visible = false;
       this.poseWrap.add(this.farMesh);
       if (GFX.tier !== 'low') {
@@ -258,6 +267,15 @@ export class CharacterVisual {
     return this.far;
   }
 
+  setGhost(on: boolean): void {
+    for (const [mesh, original] of this.originalMaterials) {
+      mesh.material = on ? this.toGhostMaterial(original) : original;
+    }
+    if (this.farMesh && this.farMaterials) {
+      this.farMesh.material = on ? this.toGhostMaterial(this.farMaterials) : this.farMaterials;
+    }
+  }
+
   dispose(): void {
     this.mixer.stopAllAction();
     this.mixer.uncacheRoot(this.model);
@@ -287,6 +305,22 @@ export class CharacterVisual {
       return s.speed >= RUN_SPEED_THRESHOLD ? 'run' : 'walk';
     }
     return 'idle';
+  }
+
+  private toGhostMaterial<T extends THREE.Material | THREE.Material[]>(material: T): T {
+    if (Array.isArray(material)) return material.map((m) => this.ghostMaterial(m)) as T;
+    return this.ghostMaterial(material) as T;
+  }
+
+  private ghostMaterial(material: THREE.Material): THREE.Material {
+    const cached = this.ghostMaterials.get(material);
+    if (cached) return cached;
+    const ghost = material.clone();
+    ghost.transparent = true;
+    ghost.opacity = GHOST_OPACITY;
+    ghost.depthWrite = false;
+    this.ghostMaterials.set(material, ghost);
+    return ghost;
   }
 
   private action(name: string | undefined): THREE.AnimationAction | null {

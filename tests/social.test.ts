@@ -38,8 +38,9 @@ describe('nine classes', () => {
       const p = sim.player;
       expect(p.maxHp).toBeGreaterThan(30);
       expect(sim.known.length).toBeGreaterThan(0);
-      // 12 action-bar slots cap the kit
-      expect(CLASSES[cls].abilities.length).toBeLessThanOrEqual(12);
+      // Expanded kits can exceed the 12 action-bar slots; overflow remains
+      // available from the spellbook and can be dragged onto the bar.
+      expect(CLASSES[cls].abilities.length).toBeGreaterThan(0);
       // the full kit resolves at MAX_LEVEL; the 10-20 band still has things to learn
       const kit = abilitiesKnownAt(cls, MAX_LEVEL);
       expect(kit.length).toBe(CLASSES[cls].abilities.length);
@@ -68,6 +69,28 @@ describe('nine classes', () => {
     const hpBefore = p.hp;
     (sim as any).dealDamage(null, p, 20, false, 'physical', 'test', 'hit');
     expect(p.hp).toBe(hpBefore); // fully soaked
+  });
+
+  it('friendly target spells can affect selected players', () => {
+    const sim = makeWorld();
+    const priestId = sim.addPlayer('priest', 'Healer');
+    const priest = sim.entities.get(priestId)!;
+    const allyId = sim.addPlayer('warrior', 'Ally');
+    const ally = sim.entities.get(allyId)!;
+    teleport(sim, priestId, ally.pos.x + 5, ally.pos.z);
+    sim.setPlayerLevel(6, priestId);
+    priest.resource = priest.maxResource;
+    ally.hp = 20;
+
+    sim.targetEntity(ally.id, priestId);
+    sim.castAbility('lesser_heal', priestId);
+    for (let i = 0; i < 20 * 3; i++) sim.tick();
+    expect(ally.hp).toBeGreaterThan(20);
+
+    for (let i = 0; i < 25; i++) sim.tick();
+    sim.castAbility('power_word_shield', priestId);
+    sim.tick();
+    expect(ally.auras.some((a) => a.kind === 'absorb')).toBe(true);
   });
 
   it('renew ticks healing over time', () => {
@@ -130,8 +153,10 @@ describe('nine classes', () => {
     const sim = new Sim({ seed: 42, playerClass: 'hunter' });
     const p = sim.player;
     const wolf = nearestMob(sim, 'forest_wolf');
-    wolf.hp = 30;
-    teleport(sim, p.id, wolf.pos.x + 20, wolf.pos.z);
+    p.maxHp = 500;
+    p.hp = 500;
+    wolf.hp = 60;
+    teleport(sim, p.id, wolf.pos.x + 35, wolf.pos.z);
     sim.targetEntity(wolf.id);
     face(sim, p.id, wolf.id);
     sim.startAutoAttack();
@@ -216,6 +241,85 @@ describe('parties', () => {
     sim.partyLeave(b);
     expect(sim.partyOf(a)).toBe(null);
     expect(sim.partyOf(b)).toBe(null);
+  });
+
+  it('does not replace a pending party invite', () => {
+    const sim = makeWorld();
+    const a = sim.addPlayer('warrior', 'Aleph');
+    const b = sim.addPlayer('priest', 'Bet');
+    const c = sim.addPlayer('rogue', 'Gimel');
+    sim.partyInvite(b, a);
+    sim.partyInvite(b, c);
+    sim.partyAccept(b);
+    expect(sim.partyOf(a)?.members).toEqual([a, b]);
+    expect(sim.partyOf(c)).toBe(null);
+  });
+
+  it('allows a new party invite after decline or expiry', () => {
+    const sim = makeWorld();
+    const a = sim.addPlayer('warrior', 'Aleph');
+    const b = sim.addPlayer('priest', 'Bet');
+    const c = sim.addPlayer('rogue', 'Gimel');
+    sim.partyInvite(b, a);
+    sim.partyDecline(b);
+    sim.partyInvite(b, c);
+    sim.partyAccept(b);
+    expect(sim.partyOf(c)?.members).toEqual([c, b]);
+    expect(sim.partyOf(a)).toBe(null);
+
+    const d = sim.addPlayer('mage', 'Dalet');
+    const e = sim.addPlayer('warrior', 'Heh');
+    sim.partyInvite(d, a);
+    for (let i = 0; i < 20 * 31; i++) sim.tick();
+    sim.partyInvite(d, e);
+    sim.partyAccept(d);
+    expect(sim.partyOf(e)?.members).toEqual([e, d]);
+    expect(sim.partyOf(a)).toBe(null);
+  });
+
+  it('refuses to accept an invite while already in a party', () => {
+    // A player can become a party leader (by inviting someone who accepts)
+    // while still holding an unconsumed incoming invite — inviting someone
+    // never consumes the inviter's own pending invite. Accepting that stale
+    // invite must NOT leave the player a member of two parties at once.
+    const sim = makeWorld();
+    const a = sim.addPlayer('warrior', 'Aleph');
+    const c = sim.addPlayer('rogue', 'Gimel');
+    const d = sim.addPlayer('mage', 'Dalet');
+    // C invites A while A is solo (stored, unaccepted).
+    sim.partyInvite(a, c);
+    // A forms a party of its own by inviting D, who accepts. A is now leader.
+    sim.partyInvite(d, a);
+    sim.partyAccept(d);
+    expect(sim.partyOf(a)?.leader).toBe(a);
+    const ownParty = sim.partyOf(a)!.id;
+    // A now accepts C's stale invite — this must be rejected.
+    sim.partyAccept(a);
+    // A stays in its own party only; no second membership is created.
+    expect(sim.partyOf(a)?.id).toBe(ownParty);
+    expect(sim.partyOf(c)?.members.includes(a) ?? false).toBe(false);
+    expect(sim.partyOf(a)?.members).toEqual([a, d]);
+  });
+
+  it('partyInfo reports per-member combat state for the UI badges', () => {
+    const { sim, a, b } = makeDuo();
+    // out of combat by default
+    const before = sim.partyInfo!.members.find((m) => m.pid === b)!;
+    expect(before.inCombat).toBe(0);
+    // engaging a member flips its flag in the next info read
+    sim.entities.get(b)!.inCombat = true;
+    const after = sim.partyInfo!.members.find((m) => m.pid === b)!;
+    expect(after.inCombat).toBe(1);
+    // and the dead flag stays independent of combat
+    expect(after.dead).toBe(0);
+  });
+
+  it('partyInfo carries member position so the minimap can place them', () => {
+    const { sim, a, b } = makeDuo();
+    teleport(sim, b, 17, -23);
+    const info = sim.partyInfo!.members.find((m) => m.pid === b)!;
+    expect(info.x).toBeCloseTo(17, 3);
+    expect(info.z).toBeCloseTo(-23, 3);
   });
 
   it('party members share kill xp with the group bonus and quest credit', () => {
@@ -318,6 +422,47 @@ describe('duels', () => {
     expect(eb.dead).toBe(false);
     expect(sim.duelFor(a)).toBe(null);
   });
+
+  it('does not replace a pending duel challenge', () => {
+    const sim = makeWorld();
+    const a = sim.addPlayer('warrior', 'Aleph');
+    const b = sim.addPlayer('mage', 'Bet');
+    const c = sim.addPlayer('rogue', 'Gimel');
+    teleport(sim, a, 0, -40);
+    teleport(sim, b, 3, -40);
+    teleport(sim, c, 6, -40);
+    sim.duelRequest(b, a);
+    sim.duelRequest(b, c);
+    sim.duelAccept(b);
+    expect(sim.duelFor(a)?.a).toBe(a);
+    expect(sim.duelFor(a)?.b).toBe(b);
+    expect(sim.duelFor(c)).toBe(null);
+  });
+
+  it('blocks other social invites until a pending duel is answered or expires', () => {
+    const sim = makeWorld();
+    const a = sim.addPlayer('warrior', 'Aleph');
+    const b = sim.addPlayer('mage', 'Bet');
+    const c = sim.addPlayer('rogue', 'Gimel');
+    teleport(sim, a, 0, -40);
+    teleport(sim, b, 3, -40);
+    teleport(sim, c, 6, -40);
+    sim.duelRequest(b, a);
+    sim.partyInvite(b, c);
+    sim.duelDecline(b);
+    sim.partyInvite(b, c);
+    sim.partyAccept(b);
+    expect(sim.partyOf(c)?.members).toEqual([c, b]);
+    expect(sim.duelFor(a)).toBe(null);
+
+    const d = sim.addPlayer('priest', 'Dalet');
+    teleport(sim, d, 9, -40);
+    sim.duelRequest(d, a);
+    for (let i = 0; i < 20 * 31; i++) sim.tick();
+    sim.partyInvite(d, c);
+    sim.partyAccept(d);
+    expect(sim.partyOf(c)?.members).toContain(d);
+  });
 });
 
 describe('trading', () => {
@@ -347,6 +492,21 @@ describe('trading', () => {
     expect(sim.countItem('baked_bread', b)).toBe(0);
     expect(sim.meta(a)!.copper).toBe(100 - 30 + 10);
     expect(sim.meta(b)!.copper).toBe(50 - 10 + 30);
+  });
+
+  it('does not replace a pending trade request', () => {
+    const sim = makeWorld();
+    const a = sim.addPlayer('warrior', 'Aleph');
+    const b = sim.addPlayer('mage', 'Bet');
+    const c = sim.addPlayer('rogue', 'Gimel');
+    teleport(sim, a, 0, -40);
+    teleport(sim, b, 3, -40);
+    teleport(sim, c, 6, -40);
+    sim.tradeRequest(b, a);
+    sim.tradeRequest(b, c);
+    sim.tradeAccept(b);
+    expect(sim.tradeFor(a)).toBeTruthy();
+    expect(sim.tradeFor(c)).toBe(null);
   });
 
   it('trade cancels when players walk apart', () => {

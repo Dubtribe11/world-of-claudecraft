@@ -337,16 +337,20 @@ export const VISUALS: Record<string, VisualDef> = {
 
 const MOB_KEYS: Record<string, string> = {
   wild_boar: 'mob_boar',
+  elder_bristleback: 'mob_boar',
   // gravecaller cult + necromancers: dark-robed casters
   gravecaller_cultist: 'mob_dark_caster',
   gravecaller_summoner: 'mob_dark_caster',
+  sister_nhalia: 'mob_dark_caster',
   deacon_voss: 'mob_dark_caster',
   wyrmcult_necromancer: 'mob_dark_caster',
   vael_the_mistcaller: 'mob_dark_caster',
   grand_necromancer_velkhar: 'mob_dark_caster',
   gorrak: 'mob_bruiser',
+  mogger: 'mob_bruiser',
   // undead variants by role
   boneclad_revenant: 'skel_warrior',
+  marrowlord_varkas: 'skel_warrior',
   bastion_revenant: 'skel_warrior',
   knight_commander_olen: 'skel_warrior',
   sanctum_boneguard: 'skel_warrior',

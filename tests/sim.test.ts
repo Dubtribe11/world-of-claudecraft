@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { Sim } from '../src/sim/sim';
 import { applyAction, encodeObs, obsSize, ACTIONS } from '../src/sim/obs';
 import {
-  dist2d, MAX_LEVEL, xpForLevel, mobXpValue, rageConversion, rageFromDealing,
-  spellHitChance, meleeMissChance,
+  type SimEvent, dist2d, FISHING_CAST_ID, FISHING_CAST_TIME, MAX_LEVEL, xpForLevel, mobXpValue,
+  rageConversion, rageFromDealing, spellHitChance, meleeMissChance,
 } from '../src/sim/types';
-import { QUESTS, abilitiesKnownAt } from '../src/sim/data';
-import { terrainHeight } from '../src/sim/world';
+import { LAKE, QUESTS, abilitiesKnownAt } from '../src/sim/data';
+import { terrainHeight, WATER_LEVEL } from '../src/sim/world';
 
 function makeSim(cls: 'warrior' | 'mage' | 'rogue' = 'warrior', seed = 42) {
   return new Sim({ seed, playerClass: cls, autoEquip: true });
@@ -33,6 +33,30 @@ function teleportTo(sim: Sim, x: number, z: number) {
 
 function facePlayerAt(sim: Sim, target: any) {
   sim.player.facing = Math.atan2(target.pos.x - sim.player.pos.x, target.pos.z - sim.player.pos.z);
+}
+
+const TEST_SWIM_DEPTH = 0.8;
+const FISHING_TEST_DISTANCES = [4, 8, 12, 16, 20, 24];
+
+function hasFishableWaterAhead(x: number, z: number, facing: number, seed: number): boolean {
+  const sin = Math.sin(facing);
+  const cos = Math.cos(facing);
+  return FISHING_TEST_DISTANCES.some((d) =>
+    terrainHeight(x + sin * d, z + cos * d, seed) < WATER_LEVEL - TEST_SWIM_DEPTH);
+}
+
+function mirrorLakeFishingSpot(seed: number) {
+  for (let r = LAKE.radius * 0.7; r <= LAKE.radius * 1.8; r += 1) {
+    for (let i = 0; i < 72; i++) {
+      const a = (i / 72) * Math.PI * 2;
+      const x = LAKE.x + Math.cos(a) * r;
+      const z = LAKE.z + Math.sin(a) * r;
+      if (terrainHeight(x, z, seed) < WATER_LEVEL) continue;
+      const facing = Math.atan2(LAKE.x - x, LAKE.z - z);
+      if (hasFishableWaterAhead(x, z, facing, seed)) return { x, z, facing };
+    }
+  }
+  throw new Error('No dry Mirror Lake fishing spot found');
 }
 
 describe('classic formulas', () => {
@@ -222,13 +246,65 @@ describe('combat', () => {
     teleportTo(sim, wolf.spawnPos.x + 100, wolf.spawnPos.z + 100);
     sim.stopAutoAttack();
     let evaded = false;
+    const leashEvents: SimEvent[] = [];
     for (let i = 0; i < 20 * 30 && !evaded; i++) {
-      sim.tick();
+      leashEvents.push(...sim.tick());
       if (wolf.aiState === 'evade' || wolf.aiState === 'idle') evaded = true;
     }
     expect(evaded).toBe(true);
+    expect(leashEvents.some((e) => e.type === 'log' && e.text.endsWith(' returns home.'))).toBe(false);
     for (let i = 0; i < 20 * 30 && wolf.aiState !== 'idle'; i++) sim.tick();
     expect(wolf.hp).toBe(wolf.maxHp);
+  });
+
+  it('hostile actions refresh the mob leash anchor for kiting', () => {
+    const sim = makeSim('warrior');
+    const wolf = nearestMob(sim, 'forest_wolf');
+    wolf.maxHp = 5000;
+    wolf.hp = 5000;
+    wolf.pos.x = wolf.spawnPos.x + 50;
+    wolf.pos.z = wolf.spawnPos.z;
+    wolf.pos.y = terrainHeight(wolf.pos.x, wolf.pos.z, sim.cfg.seed);
+    wolf.prevPos = { ...wolf.pos };
+    teleportTo(sim, wolf.pos.x + 2, wolf.pos.z);
+
+    (sim as any).dealDamage(sim.player, wolf, 1, false, 'physical', 'Test', 'hit', true);
+    sim.tick();
+
+    expect(dist2d(wolf.pos, wolf.spawnPos)).toBeGreaterThan(45);
+    expect(wolf.aiState).not.toBe('evade');
+    expect(wolf.leashAnchor).not.toBeNull();
+  });
+
+  it('social pulls only very close same-template mobs', () => {
+    const sim = makeSim('warrior');
+    const wolf = nearestMob(sim, 'forest_wolf');
+    const otherWolf = [...sim.entities.values()].find((e: any) => e.kind === 'mob' && e.id !== wolf.id && e.templateId === 'forest_wolf') as any;
+    wolf.pos = { ...wolf.spawnPos };
+    otherWolf.pos = { x: wolf.pos.x + 6, y: wolf.pos.y, z: wolf.pos.z };
+    otherWolf.prevPos = { ...otherWolf.pos };
+    (sim as any).rebucket(wolf);
+    (sim as any).rebucket(otherWolf);
+    teleportTo(sim, wolf.pos.x + 2, wolf.pos.z);
+
+    (sim as any).aggroMob(wolf, sim.player, true);
+
+    expect(otherWolf.aiState).toBe('idle');
+
+    const murloc = nearestMob(sim, 'mudfin_murloc');
+    const otherMurloc = [...sim.entities.values()].find((e: any) => e.kind === 'mob' && e.id !== murloc.id && e.templateId === 'mudfin_murloc') as any;
+    murloc.aiState = 'idle';
+    otherMurloc.aiState = 'idle';
+    murloc.pos = { ...murloc.spawnPos };
+    otherMurloc.pos = { x: murloc.pos.x + 9, y: murloc.pos.y, z: murloc.pos.z };
+    otherMurloc.prevPos = { ...otherMurloc.pos };
+    (sim as any).rebucket(murloc);
+    (sim as any).rebucket(otherMurloc);
+    teleportTo(sim, murloc.pos.x + 2, murloc.pos.z);
+
+    (sim as any).aggroMob(murloc, sim.player, true);
+
+    expect(otherMurloc.aiState).toBe('idle');
   });
 
   it('dead mobs respawn', () => {
@@ -436,6 +512,51 @@ describe('food, drink, vendor', () => {
     expect(sim.player.drinking).toBe(null);
   });
 
+  it('combat potions restore instantly, work in combat, and share a cooldown (#103)', () => {
+    const sim = makeSim('mage');
+    sim.addItem('minor_mana_potion', 2);
+    sim.player.resource = 10;
+    sim.player.inCombat = true; // potions ignore the combat lockout that blocks food/drink
+    sim.player.combatTimer = 99;
+
+    sim.useItem('minor_mana_potion');
+    expect(sim.player.resource).toBe(10 + 120); // instant, no sitting
+    expect(sim.player.sitting).toBe(false);
+    expect(sim.countItem('minor_mana_potion')).toBe(1);
+
+    // second potion is blocked by the shared cooldown
+    const afterFirst = sim.player.resource;
+    sim.useItem('minor_mana_potion');
+    expect(sim.player.resource).toBe(afterFirst);
+    expect(sim.countItem('minor_mana_potion')).toBe(1); // not consumed
+  });
+
+  it('a mana potion is not wasted (consumed + put on cooldown) at full mana', () => {
+    const sim = makeSim('mage');
+    sim.addItem('minor_mana_potion', 1);
+    sim.player.resource = sim.player.maxResource; // already topped off
+
+    sim.useItem('minor_mana_potion');
+    // nothing to restore: the potion stays in the bag and the shared
+    // cooldown is never armed (mirrors the at-full-health guard for HP potions)
+    expect(sim.player.resource).toBe(sim.player.maxResource);
+    expect(sim.countItem('minor_mana_potion')).toBe(1);
+    expect(sim.player.potionCooldownUntil).toBeLessThanOrEqual(sim.time);
+  });
+
+  it('out-of-combat mana regen is brisk and scales past the old spi/4+2 rate (#103)', () => {
+    const sim = makeSim('mage');
+    sim.setPlayerLevel(10);
+    sim.player.resource = 0;
+    sim.player.inCombat = false;
+    sim.player.combatTimer = 0;
+    sim.player.fiveSecondRule = 99; // out of combat, past the 5s rule
+    const spi = sim.player.stats.spi;
+    const oldRatePer2s = spi / 4 + 2;
+    for (let i = 0; i < 20 * 2; i++) sim.tick(); // one 2s regen tick
+    expect(sim.player.resource).toBeGreaterThan(oldRatePer2s); // faster than before
+  });
+
   it('mage conjures water and drinking restores mana', () => {
     const sim = makeSim('mage');
     sim.setPlayerLevel(4);
@@ -464,6 +585,288 @@ describe('food, drink, vendor', () => {
     sim.sellItem('wolf_fang');
     expect(sim.copper).toBe(79);
     expect(sim.countItem('wolf_fang')).toBe(1);
+  });
+
+  it('vendor buyback restores recently sold gear for the sale price', () => {
+    const sim = makeSim('warrior');
+    const wilkes = [...sim.entities.values()].find((e) => e.templateId === 'trader_wilkes')!;
+    teleportTo(sim, wilkes.pos.x + 2, wilkes.pos.z);
+    sim.addItem('apprentice_staff', 1);
+
+    sim.sellItem('apprentice_staff');
+
+    expect(sim.countItem('apprentice_staff')).toBe(0);
+    expect(sim.vendorBuyback).toEqual([{ itemId: 'apprentice_staff', count: 1 }]);
+    expect(sim.copper).toBe(120);
+
+    sim.buyBackItem('apprentice_staff');
+
+    expect(sim.countItem('apprentice_staff')).toBe(1);
+    expect(sim.vendorBuyback).toEqual([]);
+    expect(sim.copper).toBe(0);
+  });
+
+  it('vendor buyback round-trips through saved character state', () => {
+    const sim = makeSim('warrior');
+    const wilkes = [...sim.entities.values()].find((e) => e.templateId === 'trader_wilkes')!;
+    teleportTo(sim, wilkes.pos.x + 2, wilkes.pos.z);
+    sim.addItem('apprentice_staff', 1);
+    sim.sellItem('apprentice_staff');
+
+    const state = sim.serializeCharacter(sim.playerId)!;
+    expect(state.vendorBuyback).toEqual([{ itemId: 'apprentice_staff', count: 1 }]);
+
+    const sim2 = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    const pid2 = sim2.addPlayer('warrior', 'Saved', { state });
+    const wilkes2 = [...sim2.entities.values()].find((e) => e.templateId === 'trader_wilkes')!;
+    teleportTo(sim2, wilkes2.pos.x + 2, wilkes2.pos.z);
+
+    expect(sim2.meta(pid2)!.vendorBuyback).toEqual([{ itemId: 'apprentice_staff', count: 1 }]);
+    sim2.buyBackItem('apprentice_staff', pid2);
+    expect(sim2.countItem('apprentice_staff', pid2)).toBe(1);
+    expect(sim2.meta(pid2)!.vendorBuyback).toEqual([]);
+  });
+
+  it('vendor buyback requires money and keeps only recent sold item groups', () => {
+    const sim = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    const wilkes = [...sim.entities.values()].find((e) => e.templateId === 'trader_wilkes')!;
+    teleportTo(sim, wilkes.pos.x + 2, wilkes.pos.z);
+    sim.addItem('wolf_fang', 2);
+    sim.sellItem('wolf_fang');
+    sim.sellItem('wolf_fang');
+    expect(sim.vendorBuyback).toEqual([{ itemId: 'wolf_fang', count: 2 }]);
+    sim.copper = 0;
+
+    sim.buyBackItem('wolf_fang');
+
+    expect(sim.countItem('wolf_fang')).toBe(0);
+    expect(sim.vendorBuyback).toEqual([{ itemId: 'wolf_fang', count: 2 }]);
+    expect(sim.events).toContainEqual({ type: 'error', text: 'Not enough money.', pid: sim.player.id });
+
+    const itemIds = [
+      'bandit_bandana', 'tough_jerky', 'mudfin_scale', 'tallow_candle',
+      'spider_leg', 'bone_fragments', 'linen_scrap', 'baked_bread',
+      'spring_water', 'roasted_boar', 'worn_sword', 'hickory_shortstaff',
+      'apprentice_staff',
+    ];
+    for (const itemId of itemIds) {
+      sim.addItem(itemId, 1);
+      sim.sellItem(itemId);
+    }
+
+    expect(sim.vendorBuyback).toHaveLength(12);
+    expect(sim.vendorBuyback[0]).toEqual({ itemId: 'apprentice_staff', count: 1 });
+    expect(sim.vendorBuyback.some((s) => s.itemId === 'wolf_fang')).toBe(false);
+  });
+
+  it('Fisherman Brandt sells a simple fishing pole', () => {
+    const sim = makeSim('warrior');
+    const brandt = [...sim.entities.values()].find((e) => e.templateId === 'fisherman_brandt')!;
+    teleportTo(sim, brandt.pos.x + 2, brandt.pos.z);
+    sim.copper = 100;
+    sim.buyItem(brandt.id, 'simple_fishing_pole');
+    expect(sim.countItem('simple_fishing_pole')).toBe(1);
+    expect(sim.copper).toBe(80);
+  });
+
+  it('rejects fishing away from fishable water', () => {
+    const sim = makeSim('warrior');
+    sim.addItem('simple_fishing_pole', 1);
+    sim.events = [];
+    sim.useItem('simple_fishing_pole');
+    expect(sim.player.castingAbility).toBe(null);
+    expect(sim.countItem('simple_fishing_pole')).toBe(1);
+    expect(sim.events).toContainEqual(expect.objectContaining({
+      type: 'error',
+      text: 'You need to face fishable water.',
+    }));
+  });
+
+  it('starts a five-second fishing cast near and facing Mirror Lake', () => {
+    const sim = makeSim('warrior');
+    const spot = mirrorLakeFishingSpot(sim.cfg.seed);
+    teleportTo(sim, spot.x, spot.z);
+    sim.player.facing = spot.facing;
+    sim.addItem('simple_fishing_pole', 1);
+    sim.events = [];
+    sim.useItem('simple_fishing_pole');
+    expect(sim.player.castingAbility).toBe(FISHING_CAST_ID);
+    expect(sim.player.castTotal).toBe(FISHING_CAST_TIME);
+    expect(sim.player.castRemaining).toBe(FISHING_CAST_TIME);
+    expect(sim.player.channeling).toBe(false);
+    expect(sim.events).toContainEqual(expect.objectContaining({
+      type: 'castStart',
+      ability: FISHING_CAST_ID,
+      time: FISHING_CAST_TIME,
+    }));
+  });
+
+  it('rolls the fishing catch table only when the cast completes', () => {
+    const sim = makeSim('warrior');
+    const spot = mirrorLakeFishingSpot(sim.cfg.seed);
+    teleportTo(sim, spot.x, spot.z);
+    sim.player.facing = spot.facing;
+    sim.addItem('simple_fishing_pole', 1);
+    sim.events = [];
+    sim.useItem('simple_fishing_pole');
+    expect(sim.countItem('raw_mirror_trout') + sim.countItem('tangled_weed')).toBe(0);
+
+    const events: SimEvent[] = [];
+    for (let i = 0; i < 20 * 6 && sim.player.castingAbility; i++) events.push(...sim.tick());
+
+    const catchCount = sim.countItem('raw_mirror_trout') + sim.countItem('tangled_weed');
+    expect(sim.player.castingAbility).toBe(null);
+    expect(catchCount === 1 || catchCount === 0).toBe(true);
+    if (catchCount === 0) {
+      expect(events).toContainEqual(expect.objectContaining({
+        type: 'log',
+        text: 'No fish are biting.',
+      }));
+    }
+    expect(sim.countItem('simple_fishing_pole')).toBe(1);
+  });
+
+  it('movement cancels fishing before any catch is granted', () => {
+    const sim = makeSim('warrior');
+    const spot = mirrorLakeFishingSpot(sim.cfg.seed);
+    teleportTo(sim, spot.x, spot.z);
+    sim.player.facing = spot.facing;
+    sim.addItem('simple_fishing_pole', 1);
+    sim.events = [];
+    sim.useItem('simple_fishing_pole');
+    sim.moveInput.forward = true;
+    const events = sim.tick();
+    expect(sim.player.castingAbility).toBe(null);
+    expect(sim.countItem('raw_mirror_trout') + sim.countItem('tangled_weed')).toBe(0);
+    expect(events).toContainEqual(expect.objectContaining({
+      type: 'castStop',
+      success: false,
+    }));
+  });
+
+  it('does not consume items while fishing is casting', () => {
+    const sim = makeSim('warrior');
+    const spot = mirrorLakeFishingSpot(sim.cfg.seed);
+    teleportTo(sim, spot.x, spot.z);
+    sim.player.facing = spot.facing;
+    sim.addItem('simple_fishing_pole', 1);
+    sim.addItem('baked_bread', 1);
+    sim.events = [];
+    sim.useItem('simple_fishing_pole');
+    sim.events = [];
+    sim.useItem('baked_bread');
+    expect(sim.player.castingAbility).toBe(FISHING_CAST_ID);
+    expect(sim.countItem('baked_bread')).toBe(1);
+    expect(sim.player.eating).toBe(null);
+    expect(sim.events).toContainEqual(expect.objectContaining({
+      type: 'error',
+      text: 'You are busy.',
+    }));
+  });
+
+  it('rejects fishing while in combat', () => {
+    const sim = makeSim('warrior');
+    const spot = mirrorLakeFishingSpot(sim.cfg.seed);
+    teleportTo(sim, spot.x, spot.z);
+    sim.player.facing = spot.facing;
+    sim.player.inCombat = true;
+    sim.addItem('simple_fishing_pole', 1);
+    sim.events = [];
+    sim.useItem('simple_fishing_pole');
+    expect(sim.player.castingAbility).toBe(null);
+    expect(sim.events).toContainEqual(expect.objectContaining({
+      type: 'error',
+      text: "You can't do that while in combat.",
+    }));
+  });
+
+  it('rejects fishing while swimming', () => {
+    const sim = makeSim('warrior');
+    teleportTo(sim, LAKE.x, LAKE.z);
+    sim.player.facing = 0;
+    sim.addItem('simple_fishing_pole', 1);
+    sim.events = [];
+    sim.useItem('simple_fishing_pole');
+    expect(sim.player.castingAbility).toBe(null);
+    expect(sim.events).toContainEqual(expect.objectContaining({
+      type: 'error',
+      text: "You can't do that while swimming.",
+    }));
+  });
+
+  it('damage cancels fishing instead of applying spell pushback', () => {
+    const sim = makeSim('warrior');
+    const spot = mirrorLakeFishingSpot(sim.cfg.seed);
+    const wolf = nearestMob(sim, 'forest_wolf');
+    teleportTo(sim, spot.x, spot.z);
+    sim.player.facing = spot.facing;
+    sim.addItem('simple_fishing_pole', 1);
+    sim.events = [];
+    sim.useItem('simple_fishing_pole');
+    (sim as any).dealDamage(wolf, sim.player, 1, false, 'physical', null, 'hit');
+    expect(sim.player.castingAbility).toBe(null);
+    expect(sim.player.castRemaining).toBe(0);
+    expect(sim.countItem('raw_mirror_trout') + sim.countItem('tangled_weed')).toBe(0);
+  });
+
+  it('vendor buy rejects stale or invalid merchants with feedback', () => {
+    const sim = makeSim('warrior');
+    const wilkes = [...sim.entities.values()].find((e) => e.templateId === 'trader_wilkes')!;
+    teleportTo(sim, wilkes.pos.x + 40, wilkes.pos.z);
+    sim.copper = 100;
+    sim.events = [];
+
+    sim.buyItem(wilkes.id, 'baked_bread');
+
+    expect(sim.countItem('baked_bread')).toBe(0);
+    expect(sim.events).toContainEqual({ type: 'error', text: 'Too far away.', pid: sim.player.id });
+  });
+
+  it('vendor sells stack quantities without exceeding what the player has', () => {
+    const sim = makeSim('warrior');
+    const wilkes = [...sim.entities.values()].find((e) => e.templateId === 'trader_wilkes')!;
+    teleportTo(sim, wilkes.pos.x + 2, wilkes.pos.z);
+    sim.addItem('wolf_fang', 5);
+
+    sim.sellItem('wolf_fang', 3);
+
+    expect(sim.copper).toBe(12);
+    expect(sim.countItem('wolf_fang')).toBe(2);
+
+    sim.sellItem('wolf_fang', 99);
+
+    expect(sim.copper).toBe(20);
+    expect(sim.countItem('wolf_fang')).toBe(0);
+  });
+
+  it('vendor ignores invalid sell quantities', () => {
+    const sim = makeSim('warrior');
+    const wilkes = [...sim.entities.values()].find((e) => e.templateId === 'trader_wilkes')!;
+    teleportTo(sim, wilkes.pos.x + 2, wilkes.pos.z);
+    sim.addItem('wolf_fang', 2);
+
+    sim.sellItem('wolf_fang', 0);
+    sim.sellItem('wolf_fang', -1);
+
+    expect(sim.copper).toBe(0);
+    expect(sim.countItem('wolf_fang')).toBe(2);
+  });
+
+  it('discarding quest items removes them without vendor payout or buyback', () => {
+    const sim = makeSim('warrior');
+    const meta = sim.meta(sim.playerId)!;
+    meta.questLog.set('q_widows', { questId: 'q_widows', counts: [10, 0], state: 'active' });
+    sim.addItem('widow_venom_sac', 6);
+    expect(meta.questLog.get('q_widows')).toMatchObject({ counts: [10, 6], state: 'ready' });
+    sim.events = [];
+
+    sim.discardItem('widow_venom_sac', 2);
+
+    expect(sim.countItem('widow_venom_sac')).toBe(4);
+    expect(sim.copper).toBe(0);
+    expect(sim.vendorBuyback).toEqual([]);
+    expect(meta.questLog.get('q_widows')).toMatchObject({ counts: [10, 4], state: 'active' });
+    expect(sim.events).toContainEqual({ type: 'log', text: 'Discarded Widow Venom Sac x2.', color: '#999', pid: sim.player.id });
   });
 });
 
@@ -524,6 +927,22 @@ describe('quests', () => {
     sim.interact();
     expect(sim.questState('q_boars')).toBe('done');
     expect(sim.countItem('boar_hide')).toBe(0);
+  });
+
+  it('quest accept and turn-in reject stale out-of-range dialogs with feedback', () => {
+    const sim = makeSim('warrior');
+    teleportTo(sim, 0, -40);
+    sim.events = [];
+
+    sim.acceptQuest('q_wolves');
+    expect(sim.questState('q_wolves')).toBe('available');
+    expect(sim.events).toContainEqual({ type: 'error', text: 'Too far away.', pid: sim.player.id });
+
+    sim.events = [];
+    sim.questLog.set('q_wolves', { questId: 'q_wolves', counts: [8], state: 'ready' });
+    sim.turnInQuest('q_wolves');
+    expect(sim.questState('q_wolves')).toBe('ready');
+    expect(sim.events).toContainEqual({ type: 'error', text: 'Too far away.', pid: sim.player.id });
   });
 
   it('ground objects can only be picked up with the quest active', () => {

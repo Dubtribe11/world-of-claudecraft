@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../server/db', () => ({
+  pool: { query: vi.fn(async () => ({ rows: [] })) },
   insertChatLogs: vi.fn(async () => {}),
   saveCharacterState: vi.fn(async () => {}),
   openPlaySession: vi.fn(async () => 1),
@@ -36,7 +37,7 @@ describe('sent chat normalization', () => {
   it('captures /general as general', () => {
     const sim = makeWorld();
     const a = sim.addPlayer('warrior', 'Aleph');
-    expect(sim.chat('/g LFG crypt', a)).toEqual({ channel: 'general', message: 'LFG crypt' });
+    expect(sim.chat('/general LFG crypt', a)).toEqual({ channel: 'general', message: 'LFG crypt' });
   });
 
   it('captures /whisper as whisper only when the target is valid', () => {
@@ -66,7 +67,7 @@ describe('sent chat normalization', () => {
 
     let throttled = false;
     for (let i = 0; i < 40; i++) {
-      const sent = sim.chat('/g spam ' + i, a);
+      const sent = sim.chat('/general spam ' + i, a);
       sim.tick();
       if (!sent) throttled = true;
     }
@@ -109,7 +110,7 @@ describe('GameServer chat logging', () => {
 
     sendChat('hello world');
     sendChat('/y Over here');
-    sendChat('/g LFG crypt');
+    sendChat('/general LFG crypt');
     sendChat('/w bet psst');
     server.sim.partyInvite(b.pid, a.pid);
     server.sim.partyAccept(b.pid);
@@ -125,6 +126,47 @@ describe('GameServer chat logging', () => {
       { channel: 'party', message: 'party only' },
     ]);
     expect(logSpy.mock.calls.every(([r]) => r.accountId === 11 && r.characterId === 101 && r.characterName === 'Aleph')).toBe(true);
+  });
+
+  it('routes /g through guild chat and remembers guild for plain follow-up messages', async () => {
+    const server = new GameServer();
+    const aWs = fakeWs();
+    const a = server.join(aWs.ws, 11, 101, 'Aleph', 'warrior', null);
+    if ('error' in a) throw new Error('join failed');
+
+    const guildSpy = vi.spyOn(server.social, 'guildChat').mockResolvedValue(true);
+    const logSpy = vi.spyOn(server.chatLog, 'log').mockImplementation(() => {});
+    const sendChat = (text: string) => server.handleMessage(a, JSON.stringify({ t: 'cmd', cmd: 'chat', text }));
+
+    sendChat('/g hello guild');
+    sendChat('still guild');
+    await Promise.resolve();
+
+    expect(guildSpy.mock.calls.map(([, text]) => text)).toEqual(['hello guild', 'still guild']);
+    expect(logSpy.mock.calls.map(([r]) => ({ channel: r.channel, message: r.message }))).toEqual([
+      { channel: 'guild', message: 'hello guild' },
+      { channel: 'guild', message: 'still guild' },
+    ]);
+  });
+
+  it('remembers the last explicit whisper target for plain follow-up messages', () => {
+    const server = new GameServer();
+    const aWs = fakeWs();
+    const bWs = fakeWs();
+    const a = server.join(aWs.ws, 11, 101, 'Aleph', 'warrior', null);
+    const b = server.join(bWs.ws, 22, 202, 'Bet', 'mage', null);
+    if ('error' in a || 'error' in b) throw new Error('join failed');
+
+    const logSpy = vi.spyOn(server.chatLog, 'log').mockImplementation(() => {});
+    const sendChat = (text: string) => server.handleMessage(a, JSON.stringify({ t: 'cmd', cmd: 'chat', text }));
+
+    sendChat('/w Bet first');
+    sendChat('second');
+
+    expect(logSpy.mock.calls.map(([r]) => ({ channel: r.channel, message: r.message }))).toEqual([
+      { channel: 'whisper', message: 'first' },
+      { channel: 'whisper', message: 'second' },
+    ]);
   });
 });
 

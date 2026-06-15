@@ -81,6 +81,42 @@ export const BASE_ITEMS: Record<string, ItemDef> = {
     id: 'greyjaw_pelt_cloak', name: "Greyjaw's Pelt Leggings", kind: 'armor', slot: 'legs', quality: 'uncommon',
     stats: { armor: 35, sta: 1, agi: 1 }, sellValue: 110,
   },
+  greyjaw_hide_boots: {
+    id: 'greyjaw_hide_boots', name: 'Greyjaw Hide Boots', kind: 'armor', slot: 'feet', quality: 'uncommon',
+    stats: { armor: 28, agi: 1, sta: 1 }, sellValue: 130,
+  },
+  bristleback_maul: {
+    id: 'bristleback_maul', name: 'Bristleback Maul', kind: 'weapon', slot: 'mainhand', quality: 'uncommon',
+    weapon: { min: 7, max: 12, speed: 2.8 }, stats: { str: 2, sta: 1 }, sellValue: 160, requiredClass: WAR,
+  },
+  sableweb_slippers: {
+    id: 'sableweb_slippers', name: 'Sableweb Slippers', kind: 'armor', slot: 'feet', quality: 'uncommon',
+    stats: { armor: 18, int: 2, spi: 1 }, sellValue: 150, requiredClass: MAG,
+  },
+  gorraks_cruel_chopper: {
+    id: 'gorraks_cruel_chopper', name: "Gorrak's Cruel Chopper", kind: 'weapon', slot: 'mainhand', quality: 'uncommon',
+    weapon: { min: 8, max: 13, speed: 2.4 }, stats: { str: 2, sta: 1 }, sellValue: 180, requiredClass: WAR,
+  },
+  moggers_stomper_boots: {
+    id: 'moggers_stomper_boots', name: "Mogger's Stomper Boots", kind: 'armor', slot: 'feet', quality: 'uncommon',
+    stats: { armor: 32, agi: 2, sta: 1 }, sellValue: 180, requiredClass: ROG,
+  },
+  moggers_copper_cudgel: {
+    id: 'moggers_copper_cudgel', name: "Mogger's Copper Cudgel", kind: 'weapon', slot: 'mainhand', quality: 'rare',
+    weapon: { min: 9, max: 15, speed: 2.6 }, stats: { str: 3, sta: 2 }, sellValue: 850, requiredClass: WAR,
+  },
+  moggers_shiv: {
+    id: 'moggers_shiv', name: "Mogger's Shiv", kind: 'weapon', slot: 'mainhand', quality: 'rare',
+    weapon: { min: 6, max: 11, speed: 1.7, dagger: true }, stats: { agi: 4, sta: 2 }, sellValue: 850, requiredClass: ROG,
+  },
+  valeborn_spellblade: {
+    id: 'valeborn_spellblade', name: 'Valeborn Spellblade', kind: 'weapon', slot: 'mainhand', quality: 'rare',
+    weapon: { min: 8, max: 14, speed: 2.2 }, stats: { int: 4, spi: 2 }, sellValue: 850, requiredClass: MAG,
+  },
+  cryptbone_greaves: {
+    id: 'cryptbone_greaves', name: 'Cryptbone Greaves', kind: 'armor', slot: 'legs', quality: 'uncommon',
+    stats: { armor: 48, sta: 2 }, sellValue: 180,
+  },
   // --- food & drink (vendor) ---
   baked_bread: {
     id: 'baked_bread', name: 'Freshly Baked Bread', kind: 'food', quality: 'common',
@@ -90,9 +126,31 @@ export const BASE_ITEMS: Record<string, ItemDef> = {
     id: 'spring_water', name: 'Refreshing Spring Water', kind: 'drink', quality: 'common',
     drinkMana: 76, sellValue: 6, buyValue: 25,
   },
+  simple_fishing_pole: {
+    id: 'simple_fishing_pole', name: 'Simple Fishing Pole', kind: 'tool', quality: 'common',
+    use: { type: 'fishing' }, sellValue: 4, buyValue: 20,
+  },
+  raw_mirror_trout: {
+    id: 'raw_mirror_trout', name: 'Raw Mirror Trout', kind: 'food', quality: 'common',
+    foodHp: 61, sellValue: 3,
+  },
+  tangled_weed: {
+    id: 'tangled_weed', name: 'Tangled Weed', kind: 'junk', quality: 'poor',
+    sellValue: 1,
+  },
   roasted_boar: {
     id: 'roasted_boar', name: 'Roasted Boar Meat', kind: 'food', quality: 'common',
     foodHp: 117, sellValue: 12, buyValue: 100,
+  },
+  // --- combat potions (vendor): instant, usable in combat, 60s shared cooldown.
+  // Restore less than sitting to eat/drink, the price you pay for not sitting (#103).
+  minor_healing_potion: {
+    id: 'minor_healing_potion', name: 'Minor Healing Potion', kind: 'potion', quality: 'common',
+    potionHp: 90, sellValue: 8, buyValue: 40,
+  },
+  minor_mana_potion: {
+    id: 'minor_mana_potion', name: 'Minor Mana Potion', kind: 'potion', quality: 'common',
+    potionMana: 120, sellValue: 8, buyValue: 40,
   },
   conjured_water: {
     id: 'conjured_water', name: 'Conjured Spring Water', kind: 'drink', quality: 'common',
@@ -167,6 +225,26 @@ export const BASE_ITEMS: Record<string, ItemDef> = {
   gravewalker_softboots: {
     id: 'gravewalker_softboots', name: 'Gravewalker Softboots', kind: 'armor', slot: 'feet', quality: 'rare',
     stats: { armor: 32, agi: 3 }, sellValue: 500, requiredClass: ROG,
+  },
+  hollowbone_hauberk: {
+    id: 'hollowbone_hauberk', name: 'Hollowbone Hauberk', kind: 'armor', slot: 'chest', quality: 'rare',
+    stats: { armor: 105, str: 3, sta: 3 }, sellValue: 700, requiredClass: WAR,
+  },
+  gravewoven_raiment: {
+    id: 'gravewoven_raiment', name: 'Gravewoven Raiment', kind: 'armor', slot: 'chest', quality: 'rare',
+    stats: { armor: 38, int: 4, spi: 3 }, sellValue: 700, requiredClass: MAG,
+  },
+  cryptstalker_jerkin: {
+    id: 'cryptstalker_jerkin', name: 'Cryptstalker Jerkin', kind: 'armor', slot: 'chest', quality: 'rare',
+    stats: { armor: 65, agi: 4, sta: 2 }, sellValue: 700, requiredClass: ROG,
+  },
+  hollowbound_legguards: {
+    id: 'hollowbound_legguards', name: 'Hollowbound Legguards', kind: 'armor', slot: 'legs', quality: 'rare',
+    stats: { armor: 62, sta: 3 }, sellValue: 600,
+  },
+  gravepath_treads: {
+    id: 'gravepath_treads', name: 'Gravepath Treads', kind: 'armor', slot: 'feet', quality: 'rare',
+    stats: { armor: 42, sta: 2 }, sellValue: 600,
   },
   // --- quest items ---
   boar_hide: { id: 'boar_hide', name: 'Bristly Boar Hide', kind: 'quest', sellValue: 0, questId: 'q_boars' },
