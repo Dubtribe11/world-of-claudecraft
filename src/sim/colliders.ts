@@ -1,8 +1,10 @@
 import { generateDecorations } from './world';
+import type { ArenaMap } from './types';
 import {
-  DUNGEON_X_THRESHOLD, INSTANCE_SLOT_COUNT, PROPS, arenaOriginAt, dungeonAt, instanceOrigin, isArenaPos,
+  DUNGEON_X_THRESHOLD, INSTANCE_SLOT_COUNT, PROPS, arenaMapForSlot, arenaOriginAt, dungeonAt,
+  instanceOrigin, isArenaPos,
 } from './data';
-import { ARENA_LAYOUT, CRYPT_LAYOUT, SANCTUM_LAYOUT, TEMPLE_LAYOUT, layoutColliders } from './dungeon_layout';
+import { ARENA_LAYOUT, CRYPT_LAYOUT, LABYRINTH_LAYOUT, SANCTUM_LAYOUT, TEMPLE_LAYOUT, layoutColliders } from './dungeon_layout';
 
 // Static world collision. Prop placement comes from the per-zone content
 // modules (merged into PROPS by sim/data.ts): the renderer builds its meshes
@@ -96,7 +98,14 @@ function staticWorldColliders(seed: number): Collider[] {
 const CRYPT_COLLIDERS: Collider[] = layoutColliders(CRYPT_LAYOUT);
 const SANCTUM_COLLIDERS: Collider[] = layoutColliders(SANCTUM_LAYOUT);
 const TEMPLE_COLLIDERS: Collider[] = layoutColliders(TEMPLE_LAYOUT);
-const ARENA_COLLIDERS: Collider[] = layoutColliders(ARENA_LAYOUT);
+
+// Arena collider sets keyed by map. The slot a position falls in decides which
+// map runs there (data.arenaMapForSlot), so both collision and line-of-sight
+// resolve straight from the position with no live match state.
+const ARENA_COLLIDERS: Record<ArenaMap, Collider[]> = {
+  coliseum: layoutColliders(ARENA_LAYOUT),
+  labyrinth: layoutColliders(LABYRINTH_LAYOUT),
+};
 
 // Interior collider sets keyed by DungeonDef.interior.
 const INTERIOR_COLLIDERS: Record<string, Collider[]> = {
@@ -209,7 +218,7 @@ function instanceLocal(x: number, z: number): { ox: number; oz: number; interior
 export function resolvePosition(seed: number, x: number, z: number, r = 0.5): { x: number; z: number } {
   if (isArenaPos(x)) {
     const o = arenaOriginAt(z);
-    const local = resolveAgainst(ARENA_COLLIDERS, x - o.x, z - o.z, r);
+    const local = resolveAgainst(ARENA_COLLIDERS[arenaMapForSlot(o.slot)], x - o.x, z - o.z, r);
     return { x: local.x + o.x, z: local.z + o.z };
   }
   if (x > DUNGEON_X_THRESHOLD) {
@@ -228,4 +237,58 @@ export function resolvePosition(seed: number, x: number, z: number, r = 0.5): { 
 export function isBlocked(seed: number, x: number, z: number, r = 0.5): boolean {
   const res = resolvePosition(seed, x, z, r);
   return Math.abs(res.x - x) > 1e-4 || Math.abs(res.z - z) > 1e-4;
+}
+
+// ---------------------------------------------------------------------------
+// Line of sight — arena instances only. Ranged casts test a clear sightline to
+// their target against the same collider set used for movement, so the maze's
+// walls and pillars block spells the way they block bodies (sim/sim.ts gates
+// this to arena positions; PvE casts are unaffected).
+// ---------------------------------------------------------------------------
+
+// Squared distance from point (px,pz) to segment a→b.
+function segPointDist2(ax: number, az: number, bx: number, bz: number, px: number, pz: number): number {
+  const dx = bx - ax, dz = bz - az;
+  const len2 = dx * dx + dz * dz;
+  let t = len2 > 1e-9 ? ((px - ax) * dx + (pz - az) * dz) / len2 : 0;
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  const ex = ax + t * dx - px, ez = az + t * dz - pz;
+  return ex * ex + ez * ez;
+}
+
+// Does segment a→b cross the axis-aligned box [-hw,hw]×[-hd,hd]? Liang–Barsky
+// slab clip; endpoints already in the box's local frame.
+function segHitsAabb(ax: number, az: number, bx: number, bz: number, hw: number, hd: number): boolean {
+  const dx = bx - ax, dz = bz - az;
+  let t0 = 0, t1 = 1;
+  const edges: [number, number][] = [[-dx, ax + hw], [dx, hw - ax], [-dz, az + hd], [dz, hd - az]];
+  for (const [p, q] of edges) {
+    if (p > -1e-9 && p < 1e-9) {
+      if (q < 0) return false; // parallel to this slab and outside it
+      continue;
+    }
+    const t = q / p;
+    if (p < 0) { if (t > t1) return false; if (t > t0) t0 = t; }
+    else { if (t < t0) return false; if (t < t1) t1 = t; }
+  }
+  return t0 <= t1;
+}
+
+function segHitsCollider(ax: number, az: number, bx: number, bz: number, c: Collider): boolean {
+  if (c.type === 'circle') return segPointDist2(ax, az, bx, bz, c.x, c.z) < c.r * c.r;
+  const la = rotY(ax - c.x, az - c.z, -c.rot);
+  const lb = rotY(bx - c.x, bz - c.z, -c.rot);
+  return segHitsAabb(la.x, la.z, lb.x, lb.z, c.hw, c.hd);
+}
+
+// True when nothing in the arena slot's map blocks the sightline between two
+// world positions (both expected to sit in the same arena instance).
+export function arenaLineOfSightClear(ax: number, az: number, bx: number, bz: number): boolean {
+  const o = arenaOriginAt(az);
+  const colliders = ARENA_COLLIDERS[arenaMapForSlot(o.slot)];
+  const lax = ax - o.x, laz = az - o.z, lbx = bx - o.x, lbz = bz - o.z;
+  for (const c of colliders) {
+    if (segHitsCollider(lax, laz, lbx, lbz, c)) return false;
+  }
+  return true;
 }

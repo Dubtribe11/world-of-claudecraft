@@ -42,9 +42,9 @@ function finishCast(sim: Sim, pid: number) {
   }
 }
 
-// Run the countdown out so the bout goes live.
+// Run the wager window + countdown out so the bout goes live.
 function startBout(sim: Sim) {
-  for (let i = 0; i < 20 * 6; i++) {
+  for (let i = 0; i < 20 * 24; i++) {
     sim.tick();
     const m = sim.arenaMatchFor([...sim.arenaMatches.keys()][0] ?? -1);
     if (m && m.state === 'active') return;
@@ -131,8 +131,8 @@ describe('arena: a full bout', () => {
     expect(isArenaPos(eb.pos.x)).toBe(true);
     // same instance slot (close together in z)
     expect(Math.abs(ea.pos.z - eb.pos.z)).toBeLessThan(60);
-    // countdown: not yet hostile, so no swing lands
-    expect(sim.arenaMatchFor(a)!.state).toBe('countdown');
+    // wager window first: not yet hostile, so no swing lands
+    expect(sim.arenaMatchFor(a)!.state).toBe('wager');
     expect(sim.isHostileTo(ea, eb)).toBe(false);
 
     startBout(sim);

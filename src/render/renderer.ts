@@ -4,7 +4,7 @@ import type { IWorld } from '../world_api';
 import { groundHeight, WATER_LEVEL, zoneBiomeAt } from '../sim/world';
 import {
   MOBS, ABILITIES, DUNGEON_X_THRESHOLD, DUNGEON_LIST, QUESTS,
-  instanceOrigin, INSTANCE_SLOT_COUNT, ARENA_SLOT_COUNT, arenaOrigin, isArenaPos, dungeonAt,
+  instanceOrigin, INSTANCE_SLOT_COUNT, ARENA_SLOT_COUNT, arenaMapForSlot, arenaOrigin, arenaOriginAt, isArenaPos, dungeonAt,
 } from '../sim/data';
 import { ARENA_LAYOUT, DUNGEON_WALL_X } from '../sim/dungeon_layout';
 import type { BiomeId } from '../sim/types';
@@ -649,7 +649,8 @@ export class Renderer {
         const o = arenaOrigin(i);
         if (Math.abs(px - o.x) < 200 && Math.abs(pz - o.z) < 120) {
           this.builtInteriors.add(key);
-          this.buildInterior('arena', o.x, o.z);
+          // slot decides the map: even slots the open coliseum, odd the labyrinth
+          this.buildInterior(arenaMapForSlot(i) === 'labyrinth' ? 'labyrinth' : 'arena', o.x, o.z);
         }
       }
     } else if (inside) {

@@ -138,7 +138,44 @@ export const ARENA_LAYOUT: DungeonLayout = {
   dais: { x: 0, z: 2, r: 8 },
 };
 
+// The Labyrinth (interior 'labyrinth'): the Ashen Coliseum's sister pit, a
+// maze of stone walls and pillars built for line-of-sight play. Same outer
+// footprint as ARENA_LAYOUT (side walls |x|=23, z -20..24) so it drops into the
+// same instance slots, the same KayKit wall/floor modules, and the same slot
+// spacing — only the interior changes. Every obstacle is placed point-symmetric
+// about the pit centre (0, 2) so neither spawn has an edge; the central spine
+// wall denies the opening shot down the middle, forcing fighters to peek the
+// pillars and weave the side lanes. The maze blocks ranged casts for real (see
+// arenaLineOfSightClear in colliders.ts), so ducking a pillar juke-breaks a cast.
+export const LABYRINTH_LAYOUT: DungeonLayout = {
+  zMin: -20,
+  zMax: 24,
+  sideWallZ: 2,
+  sideWallHd: 23,
+  // maze pillars: a tight inner ring flanking the spine chokepoint plus outer
+  // posts lighting the side lanes (torches mount on every pillar).
+  pillars: [
+    { x: -5, z: -1 }, { x: 5, z: 5 },
+    { x: 5, z: -1 }, { x: -5, z: 5 },
+    { x: -18, z: -3 }, { x: 18, z: 7 },
+    { x: 18, z: -3 }, { x: -18, z: 7 },
+  ],
+  tombs: [],
+  // maze walls (axis-aligned OBB segments, ~2u thick). Mirror pairs about the
+  // centre keep the bout fair; lengths are multiples of the 8u wall module.
+  stubs: [
+    { x: 0, z: 2, hw: 10, hd: 1 }, // central spine — denies the straight A↔B shot
+    { x: -12, z: -7, hw: 1, hd: 5 }, // left flank near A
+    { x: 12, z: 11, hw: 1, hd: 5 }, // right flank near B (mirror)
+    { x: 7, z: -8, hw: 6, hd: 1 }, // near-A cover wall
+    { x: -7, z: 12, hw: 6, hd: 1 }, // near-B cover wall (mirror)
+  ],
+  dais: { x: 0, z: 2, r: 8 },
+};
+
 // Combatant spawn points (instance-local), at opposite ends facing each other.
+// Shared by both arena maps: the open Coliseum and the Labyrinth both seat A at
+// the south end and B at the north end (the Labyrinth's spine sits between them).
 export const ARENA_SPAWN_A = { x: 0, z: -14, facing: 0 }; // faces +z toward B
 export const ARENA_SPAWN_B = { x: 0, z: 18, facing: Math.PI }; // faces -z toward A
 

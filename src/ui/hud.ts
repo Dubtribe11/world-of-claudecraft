@@ -132,6 +132,7 @@ export class Hud {
   private lastPartySig = '';
   private lastArenaSig = '';
   private lastArenaStatusSig = '';
+  private lastArenaWagerSig = '';
   private arenaMatchSeen = false; // closes the queue panel once a bout starts
   // World Market (the Merchant's auction house)
   private marketOpen = false;
@@ -872,6 +873,7 @@ export class Hud {
     this.updatePartyFrames();
     this.updateTradeWindow();
     this.updateArenaStatus();
+    this.updateArenaWager();
     // when a bout begins, get the queue panel out of the way for the fight
     const inArenaMatch = !!this.sim.arenaInfo?.match;
     if (inArenaMatch && !this.arenaMatchSeen && $('#arena-window').style.display === 'block') {
@@ -1182,7 +1184,7 @@ export class Hud {
         + `<div class="arena-queue-status">Searching for an opponent… (${a.queueSize} in queue)</div>`;
     } else {
       action = `<button class="btn" data-act="queue">Enter the Queue</button>`
-        + `<div class="arena-note">You will be matched with the nearest-rated challenger online, then teleported to the sands. Win to climb; first to yield (1 health) loses. You return exactly where you queued.</div>`;
+        + `<div class="arena-note">You will be matched with the nearest-rated challenger online, then teleported to the sands — the open <b>Coliseum</b> or the pillared <b>Labyrinth</b>, where line of sight is everything. Before the bell you may stake an optional gold wager; win to climb the ladder and take the pot. First to yield (1 health) loses; you return exactly where you queued.</div>`;
     }
 
     this.fetchArenaLeaderboard();
@@ -1198,13 +1200,17 @@ export class Hud {
       ? `<div class="arena-sub">Ladder — All-Time</div>${allTime}`
       : '';
 
-    const sig = JSON.stringify([a.rating, a.wins, a.losses, a.queued, a.queueSize, inMatch, a.ladder, this.arenaAllTime]);
+    const sig = JSON.stringify([a.rating, a.wins, a.losses, a.goldWon, a.queued, a.queueSize, inMatch, a.ladder, this.arenaAllTime]);
     if (sig === this.lastArenaSig) return; // nothing changed; skip the DOM churn (and re-bind)
     this.lastArenaSig = sig;
 
+    const goldLine = a.goldWon > 0
+      ? `<div class="arena-note" style="margin-top:2px">Wagers won: <span class="gold">${formatMoney(a.goldWon)}</span></div>`
+      : '';
     el.innerHTML = `<div class="panel-title"><span>The Ashen Coliseum <span style="color:#998d6a;font-size:11px">1v1 Ranked</span></span><span class="x-btn" data-close>${svgIcon('close')}</span></div>`
       + `<div class="arena-rank"><span class="rating">${a.rating}</span>`
       + `<span class="wl">Rating &middot; <b>${a.wins}</b> wins / <i>${a.losses}</i> losses</span></div>`
+      + goldLine
       + action
       + `<div class="arena-sub">Ladder — Online</div>`
       + ladder
@@ -1225,17 +1231,67 @@ export class Hud {
       this.lastArenaStatusSig = '';
       return;
     }
-    const label = m.state === 'countdown' ? 'Steel yourself…'
+    const label = m.state === 'wager' ? `Place your wager… ${m.wagerEndsIn ?? 0}`
+      : m.state === 'countdown' ? 'Steel yourself…'
       : m.state === 'over' ? `Returning to the world… ${m.returnIn ?? 0}`
       : 'Fight to the yield!';
-    const sig = `${m.oppName}|${m.state}|${m.state === 'over' ? (m.returnIn ?? 0) : ''}`;
+    // show the escrowed purse once the wager locks (active/over phases)
+    const potLine = m.stakeLocked && m.pot > 0 ? `<div class="as-pot">${svgIcon('arena')} Pot: ${formatMoney(m.pot)}</div>` : '';
+    const sig = `${m.oppName}|${m.mapName}|${m.state}|${m.state === 'over' ? (m.returnIn ?? 0) : m.state === 'wager' ? (m.wagerEndsIn ?? 0) : ''}|${m.stakeLocked ? m.pot : 0}`;
     if (sig !== this.lastArenaStatusSig) {
       this.lastArenaStatusSig = sig;
       const cls = CLASSES[m.oppClass]?.name ?? m.oppClass;
       el.innerHTML = `<div class="as-vs">${svgIcon('arena')} VS <span class="opp">${esc(m.oppName)}</span> <span style="color:#b6ad8c;font-size:11px">Lv ${m.oppLevel} ${esc(cls)}</span></div>`
-        + `<div class="as-timer">${label}</div>`;
+        + `<div class="as-timer">${esc(m.mapName)} · ${label}</div>`
+        + potLine;
       el.style.display = 'block';
     }
+  }
+
+  // The pre-fight wager overlay: optional stake tiers, the live pot, and the
+  // opponent's pledge. Visible only during a match's wager window; clicking a
+  // tier pledges that stake (or clears it). Hidden once the window closes.
+  private updateArenaWager(): void {
+    const el = $('#arena-wager');
+    const a = this.sim.arenaInfo;
+    const m = a?.match ?? null;
+    if (!m || m.state !== 'wager') {
+      if (el.style.display !== 'none') { el.style.display = 'none'; this.lastArenaWagerSig = ''; }
+      return;
+    }
+    const tiers = a!.wagerTiers;
+    const myGold = this.sim.copper;
+    const sig = `${m.wagerEndsIn ?? 0}|${m.myStake}|${m.oppStake}|${m.pot}|${myGold}`;
+    if (sig === this.lastArenaWagerSig) return;
+    this.lastArenaWagerSig = sig;
+
+    const tierBtns = tiers.map((t) => {
+      const sel = t === m.myStake ? ' sel' : '';
+      const afford = t === 0 || t <= myGold;
+      const label = t === 0 ? 'No bet' : formatMoney(t);
+      return `<div class="aw-tier${sel}${afford ? '' : ' disabled'}" data-stake="${t}">${label}</div>`;
+    }).join('');
+    const oppLine = m.oppStake > 0
+      ? `Opponent pledged <b>${formatMoney(m.oppStake)}</b>.`
+      : 'Opponent has not pledged yet.';
+    const potLine = m.pot > 0
+      ? `<div class="aw-pot">Winner takes <b>${formatMoney(m.pot)}</b></div>`
+      : `<div class="aw-pot" style="color:#9c916e">No bet — a friendly bout</div>`;
+
+    el.innerHTML = `<div class="aw-title">${svgIcon('arena')} Place your wager — ${m.wagerEndsIn ?? 0}s</div>`
+      + `<div class="aw-map">${esc(m.mapName)}</div>`
+      + `<div class="aw-tiers">${tierBtns}</div>`
+      + potLine
+      + `<div class="aw-opp">${oppLine}</div>`;
+    el.style.display = 'block';
+    el.querySelectorAll('.aw-tier').forEach((node) => {
+      node.addEventListener('click', () => {
+        const stake = Number((node as HTMLElement).dataset.stake);
+        if (stake !== 0 && stake > this.sim.copper) return; // can't afford it
+        this.sim.arenaPlaceWager(stake);
+        audio.click();
+      });
+    });
   }
 
   toggleMap(): void {
@@ -1646,11 +1702,15 @@ export class Hud {
           break;
         case 'arenaFound': {
           const cls = CLASSES[ev.oppClass]?.name ?? ev.oppClass;
-          this.showBanner(`Opponent found: ${ev.oppName}`);
-          this.log(`The Coliseum pairs you against ${ev.oppName}, level ${ev.oppLevel} ${cls}.`, '#ffa040');
+          this.showBanner(`${ev.mapName} — ${ev.oppName}`);
+          this.log(`${ev.mapName} pairs you against ${ev.oppName}, level ${ev.oppLevel} ${cls}. Place your wager!`, '#ffa040');
           audio.duelChallenge();
           break;
         }
+        case 'arenaWagerLocked':
+          this.showBanner(`Wager set — ${formatMoney(ev.pot)} to the victor`);
+          this.combatLog(`Wager locked: ${formatMoney(ev.stake)} each, ${formatMoney(ev.pot)} to the winner.`, '#ffd54a');
+          break;
         case 'arenaCountdown':
           this.showBanner(`The bout begins in ${ev.seconds}…`);
           audio.duelCountdownTick();
@@ -1662,16 +1722,21 @@ export class Hud {
         case 'arenaEnd': {
           const delta = ev.ratingAfter - ev.ratingBefore;
           const sign = delta >= 0 ? '+' : '';
+          // optional wager outcome appended when a stake was on the line
+          const gold = ev.goldDelta > 0 ? `  +${formatMoney(ev.goldDelta)}`
+            : ev.goldDelta < 0 ? `  −${formatMoney(-ev.goldDelta)}` : '';
+          const goldLog = ev.goldDelta > 0 ? ` You take the pot (+${formatMoney(ev.goldDelta)}).`
+            : ev.goldDelta < 0 ? ` You lose your stake (−${formatMoney(-ev.goldDelta)}).` : '';
           if (ev.draw) {
             this.showBanner(`Arena draw vs ${ev.oppName} (${sign}${delta} rating)`);
             this.combatLog(`Arena bout vs ${ev.oppName} ended in a draw. Rating ${ev.ratingAfter} (${sign}${delta}).`, '#fa6');
           } else if (ev.won) {
-            this.showBanner(`Victory vs ${ev.oppName}!  Rating ${ev.ratingAfter} (${sign}${delta})`);
-            this.combatLog(`You defeated ${ev.oppName} in the Ashen Coliseum. Rating ${ev.ratingAfter} (${sign}${delta}).`, '#7fdc4f');
+            this.showBanner(`Victory vs ${ev.oppName}!  Rating ${ev.ratingAfter} (${sign}${delta})${gold}`);
+            this.combatLog(`You defeated ${ev.oppName} in the Ashen Coliseum. Rating ${ev.ratingAfter} (${sign}${delta}).${goldLog}`, '#7fdc4f');
             audio.duelEnd();
           } else {
-            this.showBanner(`Defeated by ${ev.oppName}.  Rating ${ev.ratingAfter} (${sign}${delta})`);
-            this.combatLog(`${ev.oppName} bested you in the Ashen Coliseum. Rating ${ev.ratingAfter} (${sign}${delta}).`, '#ff7a6a');
+            this.showBanner(`Defeated by ${ev.oppName}.  Rating ${ev.ratingAfter} (${sign}${delta})${gold}`);
+            this.combatLog(`${ev.oppName} bested you in the Ashen Coliseum. Rating ${ev.ratingAfter} (${sign}${delta}).${goldLog}`, '#ff7a6a');
             audio.death();
           }
           break;

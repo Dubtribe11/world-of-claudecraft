@@ -21,6 +21,11 @@ export const ALL_CLASSES: PlayerClass[] = [
 ];
 export type ResourceType = 'rage' | 'mana' | 'energy';
 
+// The two Ashen Coliseum arena maps. Defined here (the shared type home) so the
+// SimEvent union and IWorld can name it without importing data.ts. The slot→map
+// assignment and display names live in sim/data.ts.
+export type ArenaMap = 'coliseum' | 'labyrinth';
+
 export interface Vec3 {
   x: number;
   y: number;
@@ -556,10 +561,15 @@ export type SimEvent = { pid?: number } & (
   // Ashen Coliseum 1v1 arena: queue state, match lifecycle, and rating result
   | { type: 'arenaQueued'; position: number }
   | { type: 'arenaUnqueued' }
-  | { type: 'arenaFound'; oppName: string; oppClass: PlayerClass; oppLevel: number }
+  | { type: 'arenaFound'; oppName: string; oppClass: PlayerClass; oppLevel: number; map: ArenaMap; mapName: string }
   | { type: 'arenaCountdown'; seconds: number }
   | { type: 'arenaStart' }
-  | { type: 'arenaEnd'; won: boolean; draw: boolean; oppName: string; ratingBefore: number; ratingAfter: number }
+  // the optional side-bet locked in at the end of the wager window; pot is the
+  // whole purse (both stakes), stake is each fighter's matched contribution
+  | { type: 'arenaWagerLocked'; pot: number; stake: number }
+  // goldDelta is this player's net copper from the wager: +stake won, -stake
+  // lost, 0 for a draw (refunded) or an unwagered bout
+  | { type: 'arenaEnd'; won: boolean; draw: boolean; oppName: string; ratingBefore: number; ratingAfter: number; goldDelta: number }
   | { type: 'heal2'; sourceId: number; targetId: number; amount: number; crit: boolean; ability: string }
   // visual-only cue for the renderer: spell projectiles, dot ticks, aoe novas
   | { type: 'spellfx'; sourceId: number; targetId: number; school: string; fx: 'projectile' | 'tick' | 'nova' }
