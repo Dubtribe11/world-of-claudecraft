@@ -379,9 +379,18 @@ describe('the Hollow Crypt doors', () => {
 describe('dungeon instance placement and targetability', () => {
   it('places every dungeon entry and mob spawn on unblocked instance ground', () => {
     for (const dungeon of DUNGEON_LIST) {
-      const sim = makeSim();
-      sim.enterDungeon(dungeon.id);
-      const p = sim.player;
+      // Gated raids (minLevel / requiresParty) need a leveled, grouped player.
+      const sim = new Sim({ seed: SEED, playerClass: 'warrior', noPlayer: true });
+      const a = sim.addPlayer('warrior', 'Anna');
+      if (dungeon.minLevel) sim.setPlayerLevel(dungeon.minLevel, a);
+      if (dungeon.requiresParty) {
+        const b = sim.addPlayer('warrior', 'Boris');
+        if (dungeon.minLevel) sim.setPlayerLevel(dungeon.minLevel, b);
+        sim.partyInvite(b, a);
+        sim.partyAccept(b);
+      }
+      sim.enterDungeon(dungeon.id, a);
+      const p = sim.entities.get(a)!;
       expect(p.pos.x, `${dungeon.id} entry is not inside an instance`).toBeGreaterThan(DUNGEON_X_THRESHOLD);
       expect(isBlocked(SEED, p.pos.x, p.pos.z, 0.5), `${dungeon.id} entry spawned in geometry`).toBe(false);
 
@@ -389,7 +398,7 @@ describe('dungeon instance placement and targetability', () => {
       expect(mobs.length, `${dungeon.id} spawned no instance mobs`).toBeGreaterThan(0);
       for (const mob of mobs) {
         expect(mob.hostile, `${dungeon.id} ${mob.name} is not hostile`).toBe(true);
-        expect(sim.isHostileTo(sim.player, mob), `${dungeon.id} ${mob.name} is not targetable`).toBe(true);
+        expect(sim.isHostileTo(p, mob), `${dungeon.id} ${mob.name} is not targetable`).toBe(true);
         expect(isBlocked(SEED, mob.pos.x, mob.pos.z, 0.5), `${dungeon.id} ${mob.name} spawned in geometry`).toBe(false);
       }
     }

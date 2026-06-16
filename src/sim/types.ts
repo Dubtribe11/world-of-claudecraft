@@ -136,6 +136,20 @@ export interface LootEntry {
   rollGroup?: string;
 }
 
+// A telegraphed ground eruption queued by a boss `voidZone` mechanic. The spot
+// is marked (SimEvent 'telegraph') the moment it's queued and resolves once the
+// sim clock reaches `fireAt`, damaging players still standing inside `radius`.
+export interface PendingVoid {
+  x: number;
+  z: number;
+  fireAt: number; // sim time at which the eruption resolves
+  radius: number;
+  min: number;
+  max: number;
+  name: string;
+  school: string;
+}
+
 export type MobFamily =
   | 'beast' | 'humanoid' | 'murloc' | 'spider' | 'kobold' | 'undead'
   | 'troll' | 'ogre' | 'elemental' | 'dragonkin' | 'demon';
@@ -199,6 +213,11 @@ export interface MobTemplate {
   // more physical damage from everyone until it expires. Rides the existing
   // sunder aura; no new aura kind.
   corrode?: { chance: number; armor: number; maxStacks: number; duration: number; name: string; school?: Aura['school'] };
+  // Boss mechanic ("Void Zone"): every `every`s the boss marks the ground under
+  // a random player; after `delay`s that spot erupts for min..max within
+  // `radius`. Telegraphed (SimEvent 'telegraph' draws a warning ring; 'bossWarning'
+  // shows a center-screen callout keyed by `warnKey`) so players can move clear.
+  voidZone?: { every: number; delay: number; radius: number; min: number; max: number; name: string; warnKey: string; school?: string };
   // Pet mechanic: this creature is a ranged caster (warlock Imp) — instead of
   // closing to melee, it stays at `range` and hurls bolts of `school` damage.
   // updatePet reads this; the bolt damage comes from the mob's weapon range.
@@ -331,8 +350,12 @@ export interface DungeonDef {
   entry: { x: number; z: number }; // player arrival point (instance-local)
   exitOffset: { x: number; z: number }; // exit portal (instance-local)
   spawns: DungeonSpawn[];
-  interior: 'crypt' | 'sanctum' | 'temple'; // renderer + collider interior builder key
+  interior: 'crypt' | 'sanctum' | 'temple' | 'underworld'; // renderer + collider interior builder key
   suggestedPlayers: number;
+  // Optional hard gates (raids): block entry below `minLevel` and, when
+  // `requiresParty` is set, unless the player is grouped. Omitted = open entry.
+  minLevel?: number;
+  requiresParty?: boolean;
   enterText: string;
   leaveText: string;
 }
@@ -494,6 +517,7 @@ export interface Entity {
   comboTargetId: number | null;
   overpowerUntil: number; // sim-time until which overpower is usable
   potionCooldownUntil: number; // sim-time until a combat potion can be used again (#103)
+  lavaTick: number; // countdown between burning ticks while standing in raid lava
   // warrior charge: forced run toward the target along a pathfound route
   chargeTargetId: number | null;
   chargeTimeLeft: number; // seconds; failsafe so a blocked charge can't run forever
@@ -521,6 +545,8 @@ export interface Entity {
   summonedIds: number[]; // live adds this boss summoned; despawned on reset
   enraged: boolean; // enrage mechanic active
   healedThisPull: boolean; // desperation self-heal already used this pull
+  voidTimer: number; // boss voidZone telegraph cadence countdown
+  pendingVoids: PendingVoid[]; // telegraphed ground eruptions waiting to resolve
   spawnPos: Vec3;
   leashAnchor: Vec3 | null; // refreshed by hostile player/pet actions; spawnPos remains the true home
   evadeStall: number; // seconds an evading mob has failed to get closer to home; snaps it home if it can't path back (e.g. across water)
@@ -601,6 +627,12 @@ export type SimEvent = { pid?: number } & (
   | { type: 'heal2'; sourceId: number; targetId: number; amount: number; crit: boolean; ability: string }
   // visual-only cue for the renderer: spell projectiles, dot ticks, aoe novas
   | { type: 'spellfx'; sourceId: number; targetId: number; school: string; fx: 'projectile' | 'tick' | 'nova' }
+  // Boss raid-warning banner: a stable t() key + the casting boss's entity id so
+  // the client can show a localized center-screen mechanic callout.
+  | { type: 'bossWarning'; key: string; sourceId: number }
+  // Telegraphed ground hazard: the renderer draws a warning ring at (x,z) of
+  // `radius` for `duration` seconds before the effect lands.
+  | { type: 'telegraph'; x: number; z: number; radius: number; duration: number; school: string }
   // entityId (when set) anchors the log to that entity so the server only
   // delivers it to nearby players; anchorless logs broadcast server-wide
   | { type: 'log'; text: string; color?: string; entityId?: number }

@@ -142,6 +142,102 @@ export const ARENA_LAYOUT: DungeonLayout = {
 export const ARENA_SPAWN_A = { x: 0, z: -14, facing: 0 }; // faces +z toward B
 export const ARENA_SPAWN_B = { x: 0, z: 18, facing: Math.PI }; // faces -z toward A
 
+// ---------------------------------------------------------------------------
+// The Abyssal Maw (interior 'underworld'): the 10-player raid. Deliberately
+// NOTHING like the straight-nave crypt/temple — a wide molten cavern whose only
+// safe ground snakes WEST -> EAST -> WEST -> EAST around four lakes of lava
+// before the final bridge onto the Devourer's central throne island. The lava
+// is walkable but lethal (sim applies a burning DoT, see Sim.updateLavaHazard),
+// so the switchback is enforced by lethality, not walls: collision is just the
+// outer cavern shell plus obsidian-shard obstacles. Far wider than |x|=23, so
+// it does NOT reuse the KayKit nave geometry — the renderer builds it custom.
+export interface Rect {
+  x0: number;
+  x1: number;
+  z0: number;
+  z1: number;
+}
+
+export interface UnderworldLayout {
+  /** playable rectangle (inner faces of the perimeter walls) */
+  bounds: Rect;
+  /** molten lakes: walkable but lethal, and drawn as emissive lava planes */
+  lava: Rect[];
+  /** obsidian-shard obstacles (collider circles + render) */
+  pillars: GridPoint[];
+  /** brazier/soul-fire anchors (render: flame mesh + point light), no collider */
+  torches: GridPoint[];
+  /** the Devourer's throne island centre (render dais + central floor glow) */
+  dais: { x: number; z: number; r: number };
+}
+
+export const UNDERWORLD_WALL_HW = 1; // perimeter wall half-thickness
+export const UNDERWORLD_PILLAR_R = 1.3; // obsidian shard obstacle radius
+
+// Serpentine of lethal lakes. Each lake juts from one wall so the only dry
+// ground is a ~32u lane hugging the opposite wall; the open turn-strips between
+// bands let the raid swap sides. Boss arenas sit in the lanes; the finale is the
+// central island ringed by lava at the bottom.
+export const UNDERWORLD_LAYOUT: UnderworldLayout = {
+  bounds: { x0: -50, x1: 50, z0: -8, z1: 206 },
+  lava: [
+    { x0: -18, x1: 50, z0: 24, z1: 50 }, // Lake I — juts east, lane runs WEST
+    { x0: -50, x1: 18, z0: 64, z1: 90 }, // Lake II — juts west, lane runs EAST
+    { x0: -18, x1: 50, z0: 104, z1: 130 }, // Lake III — juts east, lane runs WEST
+    { x0: -50, x1: 18, z0: 144, z1: 170 }, // Lake IV — juts west, lane runs EAST
+    { x0: -50, x1: -18, z0: 184, z1: 206 }, // throne moat (west)
+    { x0: 18, x1: 50, z0: 184, z1: 206 }, // throne moat (east)
+  ],
+  pillars: [
+    { x: -44, z: 30 }, { x: -24, z: 46 }, // west lane I
+    { x: 0, z: 57 }, // turn I
+    { x: 44, z: 70 }, { x: 24, z: 86 }, // east lane II
+    { x: 0, z: 97 }, // turn II
+    { x: -44, z: 110 }, { x: -24, z: 126 }, // west lane III
+    { x: 0, z: 137 }, // turn III
+    { x: 44, z: 150 }, { x: 24, z: 166 }, // east lane IV
+    { x: 0, z: 177 }, // throne approach
+    { x: -13, z: 189 }, { x: 13, z: 201 }, // throne flanks
+  ],
+  torches: [
+    { x: -16, z: 0 }, { x: 16, z: 0 },
+    { x: -49, z: 26 }, { x: -19, z: 48 },
+    { x: -30, z: 57 }, { x: 30, z: 57 },
+    { x: 49, z: 66 }, { x: 19, z: 88 },
+    { x: -30, z: 97 }, { x: 30, z: 97 },
+    { x: -49, z: 106 }, { x: -19, z: 128 },
+    { x: -30, z: 137 }, { x: 30, z: 137 },
+    { x: 49, z: 146 }, { x: 19, z: 168 },
+    { x: -30, z: 177 }, { x: 30, z: 177 },
+    { x: -17, z: 186 }, { x: 17, z: 186 }, { x: -17, z: 204 }, { x: 17, z: 204 },
+  ],
+  dais: { x: 0, z: 195, r: 11 },
+};
+
+/** Interior colliders for the Abyssal Maw: the outer shell + obsidian shards.
+ *  Lava is intentionally NOT a collider — it's walkable but lethal. */
+export function underworldColliders(l: UnderworldLayout): Collider[] {
+  const out: Collider[] = [];
+  const { x0, x1, z0, z1 } = l.bounds;
+  const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+  const hwX = (x1 - x0) / 2, hdZ = (z1 - z0) / 2;
+  const W = UNDERWORLD_WALL_HW;
+  out.push({ type: 'obb', x: x0 - W, z: cz, hw: W, hd: hdZ + W, rot: 0 }); // west wall
+  out.push({ type: 'obb', x: x1 + W, z: cz, hw: W, hd: hdZ + W, rot: 0 }); // east wall
+  out.push({ type: 'obb', x: cx, z: z0 - W, hw: hwX + W, hd: W, rot: 0 }); // front wall
+  out.push({ type: 'obb', x: cx, z: z1 + W, hw: hwX + W, hd: W, rot: 0 }); // back wall
+  for (const p of l.pillars) out.push({ type: 'circle', x: p.x, z: p.z, r: UNDERWORLD_PILLAR_R });
+  return out;
+}
+
+/** True when an instance-local point lies in a molten lake (lethal ground). */
+export function inUnderworldLava(l: UnderworldLayout, x: number, z: number): boolean {
+  for (const r of l.lava) {
+    if (x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1) return true;
+  }
+  return false;
+}
+
 /** Interior collision set for a layout, in instance-local coordinates. */
 export function layoutColliders(layout: DungeonLayout): Collider[] {
   const out: Collider[] = [];

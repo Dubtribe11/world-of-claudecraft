@@ -2581,6 +2581,17 @@ export class Hud {
           break;
         }
         case 'respawn': this.log(t('hud.system.respawn'), '#7fdc4f'); break;
+        case 'bossWarning': {
+          // raid mechanic callout ("tooltip in the fight"): a center-screen
+          // banner + alarm, localized, naming the boss that triggered it.
+          const src = sim.entities.get(ev.sourceId);
+          const name = src ? entityDisplayName(src) : '';
+          const text = t(ev.key as TranslationKey, { name });
+          this.showBanner(text);
+          this.combatLog(text, '#ff8a3c');
+          audio.aggro();
+          break;
+        }
         case 'castStart': {
           const a = ABILITIES[ev.ability];
           if (a?.school === 'fire') audio.castStart();
