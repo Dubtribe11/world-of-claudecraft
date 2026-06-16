@@ -11,13 +11,15 @@
 // The S3 guard in tests/localization_fixes.test.ts parses src/sim/sim.ts, enumerates
 // every player-facing emit site, and fails if any is no longer recognized by a client
 // matcher — so a new unhandled sim string cannot ship silently.
-import { ITEMS, MOBS } from '../sim/data';
+import { DUNGEONS, ITEMS, MOBS } from '../sim/data';
 import { getLanguage, supportedLanguages, t, formatNumber, type InterpolationValues, type SupportedLanguage } from './i18n';
 import { tEntity } from './entity_i18n';
 
 const baseEnTable = {
   "error.lineOfSight": "Line of sight.",
   "error.specLevel": "You may choose a specialization at level {level}.",
+  "error.dungeonMinLevel": "You must be level {level} to enter {name}.",
+  "error.dungeonNeedsParty": "{name} can only be braved by a party.",
   "error.invalidBuild": "Invalid talent build.",
   "error.unknownSpec": "Unknown specialization.",
   "error.maxLoadouts": "You can save at most {count} loadouts.",
@@ -126,6 +128,8 @@ const BASE_DICT: Record<SupportedLanguage, Record<BaseSimMessageKey, string>> = 
   en: {
     "error.lineOfSight": "Line of sight.",
     "error.specLevel": "You may choose a specialization at level {level}.",
+    "error.dungeonMinLevel": "You must be level {level} to enter {name}.",
+    "error.dungeonNeedsParty": "{name} can only be braved by a party.",
     "error.invalidBuild": "Invalid talent build.",
     "error.unknownSpec": "Unknown specialization.",
     "error.maxLoadouts": "You can save at most {count} loadouts.",
@@ -188,6 +192,8 @@ const BASE_DICT: Record<SupportedLanguage, Record<BaseSimMessageKey, string>> = 
   es: {
     "error.lineOfSight": "Sin línea de visión.",
     "error.specLevel": "Puedes elegir una especialización al nivel {level}.",
+    "error.dungeonMinLevel": "Debes ser de nivel {level} para entrar en {name}.",
+    "error.dungeonNeedsParty": "Solo un grupo puede adentrarse en {name}.",
     "error.invalidBuild": "Configuración de talentos no válida.",
     "error.unknownSpec": "Especialización desconocida.",
     "error.maxLoadouts": "Puedes guardar como máximo {count} configuraciones.",
@@ -250,6 +256,8 @@ const BASE_DICT: Record<SupportedLanguage, Record<BaseSimMessageKey, string>> = 
   es_ES: {
     "error.lineOfSight": "Sin línea de visión.",
     "error.specLevel": "Podrás elegir una especialización en el nivel {level}.",
+    "error.dungeonMinLevel": "Debes tener nivel {level} para entrar en {name}.",
+    "error.dungeonNeedsParty": "Solo un grupo puede adentrarse en {name}.",
     "error.invalidBuild": "Configuración de talentos no válida.",
     "error.unknownSpec": "Especialización desconocida.",
     "error.maxLoadouts": "Puedes guardar como máximo {count} configuraciones.",
@@ -312,6 +320,8 @@ const BASE_DICT: Record<SupportedLanguage, Record<BaseSimMessageKey, string>> = 
   fr_FR: {
     "error.lineOfSight": "Pas de ligne de vue.",
     "error.specLevel": "Vous pourrez choisir une spécialisation au niveau {level}.",
+    "error.dungeonMinLevel": "Vous devez être niveau {level} pour entrer dans {name}.",
+    "error.dungeonNeedsParty": "Seul un groupe peut affronter {name}.",
     "error.invalidBuild": "Distribution de talents invalide.",
     "error.unknownSpec": "Spécialisation inconnue.",
     "error.maxLoadouts": "Vous pouvez enregistrer au maximum {count} configurations.",
@@ -374,6 +384,8 @@ const BASE_DICT: Record<SupportedLanguage, Record<BaseSimMessageKey, string>> = 
   fr_CA: {
     "error.lineOfSight": "Pas de ligne de vue.",
     "error.specLevel": "Vous pourrez choisir une spécialisation au niveau {level}.",
+    "error.dungeonMinLevel": "Vous devez être de niveau {level} pour entrer dans {name}.",
+    "error.dungeonNeedsParty": "Seul un groupe peut affronter {name}.",
     "error.invalidBuild": "Spécialisation invalide.",
     "error.unknownSpec": "Spécialisation inconnue.",
     "error.maxLoadouts": "Vous pouvez enregistrer au maximum {count} configurations.",
@@ -436,6 +448,8 @@ const BASE_DICT: Record<SupportedLanguage, Record<BaseSimMessageKey, string>> = 
   en_CA: {
     "error.lineOfSight": "Line of sight.",
     "error.specLevel": "You may choose a specialization at level {level}.",
+    "error.dungeonMinLevel": "You must be level {level} to enter {name}.",
+    "error.dungeonNeedsParty": "{name} can only be braved by a party.",
     "error.invalidBuild": "Invalid talent build.",
     "error.unknownSpec": "Unknown specialization.",
     "error.maxLoadouts": "You can save at most {count} loadouts.",
@@ -498,6 +512,8 @@ const BASE_DICT: Record<SupportedLanguage, Record<BaseSimMessageKey, string>> = 
   it_IT: {
     "error.lineOfSight": "Nessuna linea di vista.",
     "error.specLevel": "Puoi scegliere una specializzazione al livello {level}.",
+    "error.dungeonMinLevel": "Devi essere di livello {level} per entrare in {name}.",
+    "error.dungeonNeedsParty": "Solo un gruppo può affrontare {name}.",
     "error.invalidBuild": "Build dei talenti non valida.",
     "error.unknownSpec": "Specializzazione sconosciuta.",
     "error.maxLoadouts": "Puoi salvare al massimo {count} configurazioni.",
@@ -560,6 +576,8 @@ const BASE_DICT: Record<SupportedLanguage, Record<BaseSimMessageKey, string>> = 
   de_DE: {
     "error.lineOfSight": "Kein Sichtkontakt.",
     "error.specLevel": "Ihr könnt auf Stufe {level} eine Spezialisierung wählen.",
+    "error.dungeonMinLevel": "Ihr müsst Stufe {level} sein, um {name} zu betreten.",
+    "error.dungeonNeedsParty": "{name} kann nur von einer Gruppe bezwungen werden.",
     "error.invalidBuild": "Ungültige Talentverteilung.",
     "error.unknownSpec": "Unbekannte Spezialisierung.",
     "error.maxLoadouts": "Ihr könnt höchstens {count} Vorlagen speichern.",
@@ -622,6 +640,8 @@ const BASE_DICT: Record<SupportedLanguage, Record<BaseSimMessageKey, string>> = 
   zh_CN: {
     "error.lineOfSight": "目标不在视线内。",
     "error.specLevel": "你将在{level}级时选择专精。",
+    "error.dungeonMinLevel": "你必须达到{level}级才能进入{name}。",
+    "error.dungeonNeedsParty": "只有组队才能挑战{name}。",
     "error.invalidBuild": "无效的天赋配置。",
     "error.unknownSpec": "未知的专精。",
     "error.maxLoadouts": "你最多只能保存{count}套配置。",
@@ -684,6 +704,8 @@ const BASE_DICT: Record<SupportedLanguage, Record<BaseSimMessageKey, string>> = 
   zh_TW: {
     "error.lineOfSight": "目標不在視線內。",
     "error.specLevel": "你必須達到等級 {level} 才能選擇專精。",
+    "error.dungeonMinLevel": "你必須達到等級 {level} 才能進入{name}。",
+    "error.dungeonNeedsParty": "只有組隊才能挑戰{name}。",
     "error.invalidBuild": "無效的天賦配置。",
     "error.unknownSpec": "未知的專精。",
     "error.maxLoadouts": "你最多只能儲存 {count} 組配置。",
@@ -746,6 +768,8 @@ const BASE_DICT: Record<SupportedLanguage, Record<BaseSimMessageKey, string>> = 
   ko_KR: {
     "error.lineOfSight": "시야가 막혀 있습니다.",
     "error.specLevel": "{level}레벨에 전문화를 선택할 수 있습니다.",
+    "error.dungeonMinLevel": "{name}에 입장하려면 {level}레벨이어야 합니다.",
+    "error.dungeonNeedsParty": "{name}은(는) 파티로만 도전할 수 있습니다.",
     "error.invalidBuild": "잘못된 특성 구성입니다.",
     "error.unknownSpec": "알 수 없는 전문화입니다.",
     "error.maxLoadouts": "특성 묶음은 최대 {count}개까지 저장할 수 있습니다.",
@@ -808,6 +832,8 @@ const BASE_DICT: Record<SupportedLanguage, Record<BaseSimMessageKey, string>> = 
   ja_JP: {
     "error.lineOfSight": "視線が通っていません。",
     "error.specLevel": "専門化はレベル{level}で選択できます。",
+    "error.dungeonMinLevel": "{name}に入るにはレベル{level}が必要です。",
+    "error.dungeonNeedsParty": "{name}はパーティーでしか挑めません。",
     "error.invalidBuild": "無効なタレントビルドです。",
     "error.unknownSpec": "不明な専門化です。",
     "error.maxLoadouts": "ロードアウトは最大{count}個まで保存できます。",
@@ -870,6 +896,8 @@ const BASE_DICT: Record<SupportedLanguage, Record<BaseSimMessageKey, string>> = 
   pt_BR: {
     "error.lineOfSight": "Sem linha de visão.",
     "error.specLevel": "Você pode escolher uma especialização no nível {level}.",
+    "error.dungeonMinLevel": "Você precisa ser nível {level} para entrar em {name}.",
+    "error.dungeonNeedsParty": "Somente um grupo pode enfrentar {name}.",
     "error.invalidBuild": "Estrutura de talentos inválida.",
     "error.unknownSpec": "Especialização desconhecida.",
     "error.maxLoadouts": "Você pode salvar no máximo {count} conjuntos.",
@@ -932,6 +960,8 @@ const BASE_DICT: Record<SupportedLanguage, Record<BaseSimMessageKey, string>> = 
   ru_RU: {
     "error.lineOfSight": "Нет прямой видимости.",
     "error.specLevel": "Выбрать специализацию можно на {level} уровне.",
+    "error.dungeonMinLevel": "Чтобы войти в {name}, нужен {level} уровень.",
+    "error.dungeonNeedsParty": "Бросить вызов {name} можно только группой.",
     "error.invalidBuild": "Недопустимая сборка талантов.",
     "error.unknownSpec": "Неизвестная специализация.",
     "error.maxLoadouts": "Можно сохранить не более {count} наборов.",
@@ -1429,6 +1459,8 @@ const itemNameToId = new Map<string, string>();
 for (const [id, it] of Object.entries(ITEMS)) itemNameToId.set(it.name, id);
 const mobNameToId = new Map<string, string>();
 for (const [id, m] of Object.entries(MOBS)) mobNameToId.set(m.name, id);
+const dungeonNameToId = new Map<string, string>();
+for (const [id, d] of Object.entries(DUNGEONS)) dungeonNameToId.set(d.name, id);
 
 function locItem(name: string): string {
   const id = itemNameToId.get(name);
@@ -1437,6 +1469,10 @@ function locItem(name: string): string {
 function locMob(name: string): string {
   const id = mobNameToId.get(name);
   return id ? tEntity({ kind: 'mob', id, field: 'name' }) : name;
+}
+function locDungeon(name: string): string {
+  const id = dungeonNameToId.get(name);
+  return id ? tEntity({ kind: 'dungeon', id, field: 'name' }) : name;
 }
 function locItemStack(name: string, stackSuffix?: string): string {
   const item = locItem(name);
@@ -1476,6 +1512,8 @@ type Rule = { re: RegExp; build: (m: RegExpExecArray) => string };
 const RULES: Rule[] = [
   { re: /^You may choose a specialization at level (\d+)\.$/, build: (m) => tSim('error.specLevel', { level: m[1] }) },
   { re: /^You can save at most (\d+) loadouts\.$/, build: (m) => tSim('error.maxLoadouts', { count: m[1] }) },
+  { re: /^You must be level (\d+) to enter (.+)\.$/, build: (m) => tSim('error.dungeonMinLevel', { level: m[1], name: locDungeon(m[2]) }) },
+  { re: /^(.+) can only be braved by a party\.$/, build: (m) => tSim('error.dungeonNeedsParty', { name: locDungeon(m[1]) }) },
   { re: /^Saved build "(.+)"\.$/, build: (m) => tSim('log.savedBuild', { name: m[1] }) },
   { re: /^Loadout "(.+)" applied\.$/, build: (m) => tSim('log.loadoutApplied', { name: m[1] }) },
   { re: /^Deleted build "(.+)"\.$/, build: (m) => tSim('log.deletedBuild', { name: m[1] }) },

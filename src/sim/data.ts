@@ -28,6 +28,7 @@ import {
   TEMPLE_CAMPS, TEMPLE_DUNGEON_DEFS, TEMPLE_DUNGEON_MOBS, TEMPLE_ITEMS, TEMPLE_MOBS,
   TEMPLE_NPCS, TEMPLE_OBJECTS, TEMPLE_PROPS, TEMPLE_QUEST_ORDER, TEMPLE_QUESTS,
 } from './content/temple';
+import { ABYSS_DUNGEON_DEFS, ABYSS_ITEMS, ABYSS_MOBS } from './content/abyss';
 
 function mergeItems(...parts: Record<string, ItemDef>[]): Record<string, ItemDef> {
   const merged = Object.assign({}, ...parts);
@@ -50,11 +51,11 @@ export type {
 // Merged content tables
 // ---------------------------------------------------------------------------
 
-export const ITEMS: Record<string, ItemDef> = mergeItems(BASE_ITEMS, ZONE2_ITEMS, ZONE3_ITEMS, TEMPLE_ITEMS);
+export const ITEMS: Record<string, ItemDef> = mergeItems(BASE_ITEMS, ZONE2_ITEMS, ZONE3_ITEMS, TEMPLE_ITEMS, ABYSS_ITEMS);
 
 export const MOBS: Record<string, MobTemplate> = {
   ...ZONE1_MOBS, ...ZONE2_MOBS, ...ZONE3_MOBS, ...DUNGEON_MOBS,
-  ...WARLOCK_PET_MOBS, ...TEMPLE_MOBS, ...TEMPLE_DUNGEON_MOBS,
+  ...WARLOCK_PET_MOBS, ...TEMPLE_MOBS, ...TEMPLE_DUNGEON_MOBS, ...ABYSS_MOBS,
 };
 
 export const NPCS: Record<string, NpcDef> = {
@@ -165,7 +166,7 @@ export function instanceOrigin(dungeonIndex: number, slot: number): { x: number;
   return { x: 900 + dungeonIndex * 600, z: -1250 + slot * 500 };
 }
 
-export const DUNGEONS: Record<string, DungeonDef> = { ...DUNGEON_DEFS, ...TEMPLE_DUNGEON_DEFS };
+export const DUNGEONS: Record<string, DungeonDef> = { ...DUNGEON_DEFS, ...TEMPLE_DUNGEON_DEFS, ...ABYSS_DUNGEON_DEFS };
 
 export const DUNGEON_LIST: DungeonDef[] = Object.values(DUNGEONS).sort((a, b) => a.index - b.index);
 
@@ -179,16 +180,33 @@ export function dungeonAt(x: number): DungeonDef | null {
   return dungeonByIndex(Math.round((x - 900) / 600));
 }
 
+// Map a far-off world position back to its instance-local coordinates (origin
+// subtracted), picking the nearest slot by z. Mirrors the private resolver in
+// colliders.ts; exported so the sim can test instance-local hazards (lava).
+export function instanceLocalPos(x: number, z: number): { lx: number; lz: number; dungeon: DungeonDef } | null {
+  const dungeon = dungeonAt(x);
+  if (!dungeon) return null;
+  let best = 0, bestD = Infinity;
+  for (let i = 0; i < INSTANCE_SLOT_COUNT; i++) {
+    const d = Math.abs(z - instanceOrigin(dungeon.index, i).z);
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  const o = instanceOrigin(dungeon.index, best);
+  return { lx: x - o.x, lz: z - o.z, dungeon };
+}
+
 // ---------------------------------------------------------------------------
 // The Ashen Coliseum — 1v1 ranked arena. Its match instances live in their own
-// far-off flat-ground x-band, well past the dungeon bands (index 0/1/2 sit at
-// x 900/1500/2100). Like dungeons, x beyond DUNGEON_X_THRESHOLD means flat
-// ground (world.groundHeight) and instance-local collision (sim/colliders.ts);
-// the band split below keeps arena positions from being read as a dungeon.
+// far-off flat-ground x-band, well past the dungeon bands (index 0/1/2/3/4 sit
+// at x 900/1500/2100/2700/3300). Like dungeons, x beyond DUNGEON_X_THRESHOLD
+// means flat ground (world.groundHeight) and instance-local collision
+// (sim/colliders.ts); the band split below keeps arena positions from being
+// read as a dungeon. (The arena band was bumped up to make room for the
+// Abyssal Maw raid at dungeon index 4 / x=3300.)
 // ---------------------------------------------------------------------------
 
-export const ARENA_X = 3000; // arena instances share this x; slots stack along z
-export const ARENA_X_MIN = 2800; // x at/after this = an arena instance, not a dungeon
+export const ARENA_X = 3800; // arena instances share this x; slots stack along z
+export const ARENA_X_MIN = 3600; // x at/after this = an arena instance, not a dungeon
 export const ARENA_SLOT_COUNT = 4; // concurrent 1v1 matches the world can host
 const ARENA_Z0 = -1250;
 const ARENA_SLOT_SPACING = 120; // > the pit footprint (~44yd) so slots never overlap

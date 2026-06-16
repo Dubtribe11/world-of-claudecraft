@@ -1,10 +1,10 @@
 import {
   ABILITIES, ARENA_SLOT_COUNT, CAMPS, CLASSES, DUNGEONS, DUNGEON_LIST, DungeonDef, arenaOrigin, dungeonAt,
-  DUNGEON_X_THRESHOLD, GROUND_OBJECTS, GROUP_XP_BONUS, INSTANCE_SLOT_COUNT, isArenaPos,
+  DUNGEON_X_THRESHOLD, GROUND_OBJECTS, GROUP_XP_BONUS, INSTANCE_SLOT_COUNT, instanceLocalPos, isArenaPos,
   ITEMS, MOBS, NPCS, PLAYER_START, QUESTS, questRewardItemId, abilitiesKnownAt, instanceOrigin,
   zoneAt, ZONES,
 } from './data';
-import { ARENA_SPAWN_A, ARENA_SPAWN_B } from './dungeon_layout';
+import { ARENA_SPAWN_A, ARENA_SPAWN_B, UNDERWORLD_LAYOUT, inUnderworldLava } from './dungeon_layout';
 import { lineOfSightClear, resolvePosition } from './colliders';
 import { findPath } from './pathfind';
 import { createGroundObject, createMob, createNpc, createPlayer, recalcPlayerStats, PlayerEquipment } from './entity';
@@ -64,8 +64,11 @@ const GRAVITY = 16;
 const JUMP_VELOCITY = 6;
 const MELEE_ARC = 2.2; // radians half-arc within which melee swings connect
 const FALL_SAFE_DISTANCE = 12; // yards of free fall before damage
+const LAVA_TICK_EVERY = 0.5; // seconds between burning ticks in the Abyssal Maw's lava
+const LAVA_TICK_PCT = 0.09; // fraction of max hp burned per tick — lethal within seconds
+const VOID_MARK_RANGE = 70; // yards from a boss within which Void Zones can mark a player
 const OBJECT_RESPAWN = 30;
-const PARTY_MAX = 5;
+const PARTY_MAX = 10; // a full raid group for the 10-player Abyssal instance
 const PARTY_XP_RANGE = 80; // yards: members this close share kill xp/credit
 const DUEL_COUNTDOWN = 3;
 // Ashen Coliseum 1v1 arena
@@ -1218,6 +1221,7 @@ export class Sim {
       if (!p) continue;
       if (!p.dead) {
         this.updatePlayerMovement(p, meta);
+        this.updateLavaHazard(p);
         this.updateDoorTriggers(p);
         this.updateCasting(p, meta);
         this.updatePlayerAutoAttack(p, meta);
@@ -1648,6 +1652,24 @@ export class Sim {
         p.fallStartY = ground;
       }
     }
+  }
+
+  // Abyssal Maw: standing in a molten lake burns for a hard fraction of max hp
+  // twice a second. Walkable but lethal — this is what makes the switchback over
+  // lava actually dangerous (the bridges are the only safe route).
+  private updateLavaHazard(p: Entity): void {
+    if (p.pos.x <= DUNGEON_X_THRESHOLD) { p.lavaTick = 0; return; }
+    const loc = instanceLocalPos(p.pos.x, p.pos.z);
+    if (!loc || loc.dungeon.interior !== 'underworld' || !inUnderworldLava(UNDERWORLD_LAYOUT, loc.lx, loc.lz)) {
+      p.lavaTick = 0;
+      return;
+    }
+    p.lavaTick -= DT;
+    if (p.lavaTick > 0) return;
+    p.lavaTick = LAVA_TICK_EVERY;
+    const dmg = Math.max(1, Math.round(p.maxHp * LAVA_TICK_PCT));
+    this.emit({ type: 'spellfx', sourceId: p.id, targetId: p.id, school: 'fire', fx: 'nova' });
+    this.dealDamage(null, p, dmg, false, 'fire', 'Molten Rock', 'hit', true);
   }
 
   private standUp(p: Entity): void {
@@ -3895,6 +3917,7 @@ export class Sim {
             const school = stomp.school ?? 'physical';
             this.emit({ type: 'spellfx', sourceId: mob.id, targetId: mob.id, school, fx: 'nova' });
             this.emit({ type: 'log', text: `${mob.name} unleashes ${stomp.name}!`, color: '#ff9933', entityId: mob.id });
+            if (MOBS[mob.templateId]?.boss) this.emit({ type: 'bossWarning', key: 'raidWarn.stomp', sourceId: mob.id });
             for (const meta of this.players.values()) {
               const pe = this.entities.get(meta.entityId);
               if (!pe || pe.dead || dist2d(pe.pos, mob.pos) > stomp.radius) continue;
@@ -3908,6 +3931,32 @@ export class Sim {
                 remaining: stomp.duration, duration: stomp.duration, value: 0,
                 sourceId: mob.id, school: school as Aura['school'],
               });
+            }
+          }
+        }
+        // Boss Void Zone: every `every`s, mark the ground under a random player
+        // in range. The spot is telegraphed (warning ring + center-screen
+        // callout) and resolved `delay`s later in updateBossMechanics, so the
+        // raid has time to move clear — the core "hard to maneuver" pressure.
+        const voidZone = MOBS[mob.templateId]?.voidZone;
+        if (voidZone) {
+          mob.voidTimer -= DT;
+          if (mob.voidTimer <= 0) {
+            mob.voidTimer = voidZone.every;
+            const marks: Entity[] = [];
+            for (const meta of this.players.values()) {
+              const pe = this.entities.get(meta.entityId);
+              if (pe && !pe.dead && dist2d(pe.pos, mob.pos) <= VOID_MARK_RANGE) marks.push(pe);
+            }
+            if (marks.length > 0) {
+              const victim = marks[this.rng.int(0, marks.length - 1)];
+              const school = voidZone.school ?? 'shadow';
+              mob.pendingVoids.push({
+                x: victim.pos.x, z: victim.pos.z, fireAt: this.time + voidZone.delay,
+                radius: voidZone.radius, min: voidZone.min, max: voidZone.max, name: voidZone.name, school,
+              });
+              this.emit({ type: 'telegraph', x: victim.pos.x, z: victim.pos.z, radius: voidZone.radius, duration: voidZone.delay, school });
+              this.emit({ type: 'bossWarning', key: voidZone.warnKey, sourceId: mob.id });
             }
           }
         }
@@ -3985,6 +4034,8 @@ export class Sim {
     mob.enraged = false;
     mob.healedThisPull = false;
     mob.stompTimer = MOBS[mob.templateId]?.stomp?.every ?? 0;
+    mob.voidTimer = MOBS[mob.templateId]?.voidZone?.every ?? 0;
+    mob.pendingVoids = [];
     mob.wanderTimer = this.rng.range(2, 8);
   }
 
@@ -4333,6 +4384,8 @@ export class Sim {
     mob.enraged = false;
     mob.healedThisPull = false;
     mob.stompTimer = MOBS[mob.templateId]?.stomp?.every ?? 0;
+    mob.voidTimer = MOBS[mob.templateId]?.voidZone?.every ?? 0;
+    mob.pendingVoids = [];
     mob.wanderTimer = this.rng.range(2, 8);
     for (const meta of this.players.values()) {
       const e = this.entities.get(meta.entityId);
@@ -4396,7 +4449,10 @@ export class Sim {
   // and reset on evade/respawn.
   private updateBossMechanics(mob: Entity): void {
     const tmpl = MOBS[mob.templateId];
-    if (!tmpl || (!tmpl.summonAdds && !tmpl.enrage && !tmpl.desperateHeal)) return;
+    if (!tmpl) return;
+    // Resolve telegraphed Void Zones first, independent of the other mechanics.
+    this.resolvePendingVoids(mob);
+    if (!tmpl.summonAdds && !tmpl.enrage && !tmpl.desperateHeal) return;
     const hpFrac = mob.hp / Math.max(1, mob.maxHp);
     if (tmpl.summonAdds) {
       const thresholds = tmpl.summonAdds.atHpPct;
@@ -4410,6 +4466,7 @@ export class Sim {
       this.emit({ type: 'aura', targetId: mob.id, name: 'Enrage', gained: true });
       this.emit({ type: 'log', text: `${mob.name} becomes enraged!`, color: '#ff6666', entityId: mob.id });
       this.emit({ type: 'spellfx', sourceId: mob.id, targetId: mob.id, school: 'fire', fx: 'nova' });
+      if (tmpl.boss) this.emit({ type: 'bossWarning', key: 'raidWarn.enrage', sourceId: mob.id });
     }
     if (tmpl.desperateHeal && !mob.healedThisPull && hpFrac <= tmpl.desperateHeal.belowHpPct) {
       mob.healedThisPull = true;
@@ -4423,11 +4480,32 @@ export class Sim {
     }
   }
 
+  // Resolve telegraphed Void Zones whose timer has elapsed: everyone still
+  // standing in a marked circle takes the hit. The warning ring already showed
+  // the spot (and flashes on eruption client-side), so no extra VFX here.
+  private resolvePendingVoids(mob: Entity): void {
+    if (mob.pendingVoids.length === 0) return;
+    const due = mob.pendingVoids.filter((v) => this.time >= v.fireAt);
+    if (due.length === 0) return;
+    mob.pendingVoids = mob.pendingVoids.filter((v) => this.time < v.fireAt);
+    for (const v of due) {
+      for (const meta of this.players.values()) {
+        const pe = this.entities.get(meta.entityId);
+        if (!pe || pe.dead) continue;
+        if (Math.hypot(pe.pos.x - v.x, pe.pos.z - v.z) <= v.radius) {
+          const dmg = Math.round(this.rng.range(v.min, v.max));
+          this.dealDamage(mob, pe, dmg, false, v.school, v.name, 'hit', true);
+        }
+      }
+    }
+  }
+
   private spawnBossAdds(boss: Entity, mobId: string, count: number): void {
     const template = MOBS[mobId];
     if (!template) return;
     this.emit({ type: 'log', text: `${boss.name} calls for aid!`, color: '#ff6666', entityId: boss.id });
     this.emit({ type: 'spellfx', sourceId: boss.id, targetId: boss.id, school: 'shadow', fx: 'nova' });
+    if (MOBS[boss.templateId]?.boss) this.emit({ type: 'bossWarning', key: 'raidWarn.summon', sourceId: boss.id });
     // adds spawned inside a claimed instance despawn with it
     const inst = this.instances.find((i) => {
       if (i.partyKey === null) return false;
@@ -6665,6 +6743,17 @@ export class Sim {
     const r = this.resolve(pid);
     const dungeon = DUNGEONS[dungeonId];
     if (!r || !dungeon || r.e.dead) return;
+    const party = this.partyOf(r.meta.entityId);
+    // Hard raid gates: a level floor and (for raids) a required group. Checked
+    // before claiming an instance so an ineligible player never reserves a slot.
+    if (dungeon.minLevel && r.e.level < dungeon.minLevel) {
+      this.error(r.meta.entityId, `You must be level ${dungeon.minLevel} to enter ${dungeon.name}.`);
+      return;
+    }
+    if (dungeon.requiresParty && (!party || party.members.length < 2)) {
+      this.error(r.meta.entityId, `${dungeon.name} can only be braved by a party.`);
+      return;
+    }
     const key = this.instanceKeyFor(r.meta.entityId);
     let inst = this.instances.find((i) => i.dungeonId === dungeonId && i.partyKey === key);
     if (!inst) {
@@ -6672,7 +6761,6 @@ export class Sim {
       if (!inst) { this.error(r.meta.entityId, `All instances of ${dungeon.name} are busy. Try again soon.`); return; }
       this.claimInstance(inst, key);
     }
-    const party = this.partyOf(r.meta.entityId);
     if (!party || party.members.length < dungeon.suggestedPlayers) {
       this.emit({ type: 'log', text: `${dungeon.name} is meant for a full party of ${dungeon.suggestedPlayers}. Tread carefully.`, color: '#f96', pid: r.meta.entityId });
     }

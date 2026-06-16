@@ -1268,9 +1268,13 @@ export class GameServer {
   }
 
   private eventAnchor(ev: SimEvent): { x: number; y: number; z: number } | null {
+    // telegraphed hazards carry their own world coords (no entity to anchor to)
+    if (ev.type === 'telegraph') return { x: ev.x, y: 0, z: ev.z };
     let id: number | undefined;
     if ('targetId' in ev && typeof ev.targetId === 'number') id = ev.targetId;
     else if ('entityId' in ev && typeof ev.entityId === 'number') id = ev.entityId;
+    // boss-warning banners anchor to the casting boss so they stay interest-scoped
+    else if ('sourceId' in ev && typeof ev.sourceId === 'number') id = ev.sourceId;
     if (id === undefined) return null; // chat/log etc: broadcast
     return this.sim.entities.get(id)?.pos ?? null;
   }

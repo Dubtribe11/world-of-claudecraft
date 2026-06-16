@@ -36,7 +36,7 @@ describe('/party readout command', () => {
     expect(sent).toBeNull(); // self-only readout is never broadcast
     const text = errorText(sim.tick(), a);
     expect(text).toBeDefined();
-    expect(text).toContain('Party (3/5):');
+    expect(text).toContain('Party (3/10):');
     expect(text).toContain('Aleph');
     expect(text).toContain('[leader]');
     expect(text).toContain('Bet');

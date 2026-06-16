@@ -9716,6 +9716,19 @@ const DROWNED_MOB_IDS = [
   "choirmother_selthe", "drowned_templeguard", "drowned_votary", "glimmermere_wader", "glimmerscale_lurker", "moonspawn", "pale_choir_acolyte", "pearlguard_sentinel", "sethrael_palecoil", "warlock_imp", "warlock_voidwalker", "ysolei"
 ] as const;
 
+// The Abyssal Maw raid (content/abyss.ts). Mob + item + dungeon entity names,
+// merged into each locale's entities below (mirrors the Drowned Temple block).
+const ABYSS_MOB_IDS = [
+  "charred_revenant", "abyssal_imp", "molten_shambler", "soulflame_wraith", "risen_thrall", "pit_broodling", "tormented_soul",
+  "gorehoof_the_charwarden", "malgazzar_the_flameborn", "archlich_vekru", "broodmother_xalthrea", "xal_goreth_the_devourer",
+] as const;
+
+const ABYSS_ITEM_IDS = [
+  "cataclysms_edge", "staff_of_the_devourer", "fang_of_the_abyss", "emberforged_breastplate", "cinderweave_robe", "ashstalker_jerkin",
+  "emberforged_legplates", "cinderweave_leggings", "ashstalker_legguards", "emberforged_greaves", "cinderweave_sandals", "ashstalker_treads",
+  "abyssal_cinder",
+] as const;
+
 const phase11ExtraEn = {
     abilities: abilityTranslations([
       ["bear_charge", "Bear Charge", "Charge an enemy, generating 9 rage and stunning it for 1 sec. 8-25 yd range. Bear Form only."],
@@ -10374,6 +10387,330 @@ const phase11Extra = {
 };
 phase11Extra.es_ES = phase11Extra.es;
 phase11Extra.fr_CA = phase11Extra.fr_FR;
+
+// The Abyssal Maw raid (content/abyss.ts) entity names + dungeon strings.
+// Same id-array + per-locale name-array structure as the Drowned Temple block;
+// proper names (Xal'Goreth, Xal'Threa, Gorehoof, Malgazzar, Vekru) carry through.
+const abyssExtraEn = {
+  mobs: phase11NameTranslations(ABYSS_MOB_IDS, [
+    "Charred Revenant", "Abyssal Imp", "Molten Shambler", "Soulflame Wraith", "Risen Thrall", "Pit Broodling", "Tormented Soul",
+    "Gorehoof the Charwarden", "Malgazzar the Flameborn", "Archlich Vekru", "Broodmother Xal'Threa", "Xal'Goreth, the Devourer",
+  ], 'abyss mob'),
+  items: phase11NameTranslations(ABYSS_ITEM_IDS, [
+    "Cataclysm's Edge", "Staff of the Devourer", "Fang of the Abyss", "Emberforged Breastplate", "Cinderweave Robe", "Ashstalker Jerkin",
+    "Emberforged Legplates", "Cinderweave Leggings", "Ashstalker Legguards", "Emberforged Greaves", "Cinderweave Sandals", "Ashstalker Treads",
+    "Abyssal Cinder",
+  ], 'abyss item'),
+  dungeons: {
+    abyssal_maw: {
+      name: "The Abyssal Maw",
+      enterText: "The rift drags you down into heat and ash — and far below, something vast draws breath. The Abyssal Maw has opened.",
+      leaveText: "You claw back up through the rift into the cold mountain wind.",
+    },
+  },
+};
+
+const abyssExtra = {
+  en: abyssExtraEn,
+  es: {
+    mobs: phase11NameTranslations(ABYSS_MOB_IDS, [
+      "Renaciente Calcinado", "Diablillo Abisal", "Devastador de Magma", "Espectro de Almallama", "Esclavo Resucitado", "Cría del Foso", "Alma Atormentada",
+      "Pezuña Sangrienta el Guardián de la Ceniza", "Malgazzar el Nacido en Llamas", "Archilich Vekru", "Madre de Cría Xal'Threa", "Xal'Goreth, el Devorador",
+    ], 'abyss mob'),
+    items: phase11NameTranslations(ABYSS_ITEM_IDS, [
+      "Filo del Cataclismo", "Bastón del Devorador", "Colmillo del Abismo", "Peto Forjado en Brasas", "Túnica de Tejido de Ceniza", "Coraza de Acecha-Cenizas",
+      "Quijotes Forjados en Brasas", "Perneras de Tejido de Ceniza", "Grebas de Acecha-Cenizas", "Escarpes Forjados en Brasas", "Sandalias de Tejido de Ceniza", "Botas de Acecha-Cenizas",
+      "Brasa Abisal",
+    ], 'abyss item'),
+    dungeons: {
+      abyssal_maw: {
+        name: "Las Fauces Abisales",
+        enterText: "La grieta te arrastra hacia el calor y la ceniza — y muy abajo, algo inmenso toma aliento. Las Fauces Abisales se han abierto.",
+        leaveText: "Trepas de vuelta por la grieta hasta el frío viento de la montaña.",
+      },
+    },
+  },
+  fr_FR: {
+    mobs: phase11NameTranslations(ABYSS_MOB_IDS, [
+      "Revenant calciné", "Diablotin abyssal", "Titubeur de magma", "Spectre d'âme-flamme", "Tâcheron relevé", "Engeance de la fosse", "Âme tourmentée",
+      "Sabotsang le Gardien-de-cendre", "Malgazzar le Flamboyant", "Archliche Vekru", "Mère pondeuse Xal'Threa", "Xal'Goreth, le Dévoreur",
+    ], 'abyss mob'),
+    items: phase11NameTranslations(ABYSS_ITEM_IDS, [
+      "Tranchant du cataclysme", "Bâton du Dévoreur", "Croc de l'abîme", "Plastron forgé dans la braise", "Robe tissée de cendre", "Casaque du Traque-cendre",
+      "Jambières forgées dans la braise", "Cuissardes tissées de cendre", "Jambières du Traque-cendre", "Grèves forgées dans la braise", "Sandales tissées de cendre", "Bottes du Traque-cendre",
+      "Braise abyssale",
+    ], 'abyss item'),
+    dungeons: {
+      abyssal_maw: {
+        name: "La Gueule abyssale",
+        enterText: "La faille t'entraîne vers le bas, dans la chaleur et la cendre — et tout en bas, quelque chose d'immense reprend son souffle. La Gueule abyssale s'est ouverte.",
+        leaveText: "Tu remontes en t'agrippant à travers la faille jusqu'au vent froid de la montagne.",
+      },
+    },
+  },
+  it_IT: {
+    mobs: phase11NameTranslations(ABYSS_MOB_IDS, [
+      "Spettro Carbonizzato", "Diavoletto Abissale", "Vacillante di Magma", "Spettro d'Animafiamma", "Schiavo Risorto", "Covata della Fossa", "Anima Tormentata",
+      "Zoccolo Cruento il Guardiano della Cenere", "Malgazzar il Nato dalle Fiamme", "Arcilich Vekru", "Madre della Covata Xal'Threa", "Xal'Goreth, il Divoratore",
+    ], 'abyss mob'),
+    items: phase11NameTranslations(ABYSS_ITEM_IDS, [
+      "Filo del Cataclisma", "Bastone del Divoratore", "Zanna dell'Abisso", "Corazza Forgiata nella Brace", "Veste Intessuta di Cenere", "Giubba del Cacciacenere",
+      "Gambali Forgiati nella Brace", "Cosciali Intessuti di Cenere", "Gambali del Cacciacenere", "Schinieri Forgiati nella Brace", "Sandali Intessuti di Cenere", "Stivali del Cacciacenere",
+      "Brace Abissale",
+    ], 'abyss item'),
+    dungeons: {
+      abyssal_maw: {
+        name: "Le Fauci Abissali",
+        enterText: "La frattura ti trascina giù nel calore e nella cenere — e laggiù in fondo, qualcosa di immenso trae respiro. Le Fauci Abissali si sono aperte.",
+        leaveText: "Ti arrampichi di nuovo su attraverso la frattura nel freddo vento della montagna.",
+      },
+    },
+  },
+  de_DE: {
+    mobs: phase11NameTranslations(ABYSS_MOB_IDS, [
+      "Verkohlter Wiedergänger", "Abyssischer Wichtel", "Geschmolzener Schlurfer", "Seelenflammen-Wicht", "Auferstandener Knecht", "Grubenbrut", "Gequälte Seele",
+      "Schlachthuf der Aschewart", "Malgazzar der Flammgeborene", "Erzlich Vekru", "Brutmutter Xal'Threa", "Xal'Goreth, der Verschlinger",
+    ], 'abyss mob'),
+    items: phase11NameTranslations(ABYSS_ITEM_IDS, [
+      "Schneide des Kataklysmus", "Stab des Verschlingers", "Reißzahn des Abgrunds", "Glutgeschmiedeter Brustpanzer", "Aschgewebte Robe", "Aschpirsch-Wams",
+      "Glutgeschmiedete Beinplatten", "Aschgewebte Beinkleider", "Aschpirsch-Beinschienen", "Glutgeschmiedete Beinschienen", "Aschgewebte Sandalen", "Aschpirsch-Trittlinge",
+      "Abyssische Glut",
+    ], 'abyss item'),
+    dungeons: {
+      abyssal_maw: {
+        name: "Der Abyssische Schlund",
+        enterText: "Der Riss zerrt Euch hinab in Hitze und Asche — und tief darunter holt etwas Gewaltiges Atem. Der Abyssische Schlund hat sich geöffnet.",
+        leaveText: "Ihr klettert durch den Riss wieder empor in den kalten Bergwind.",
+      },
+    },
+  },
+  zh_CN: {
+    mobs: phase11NameTranslations(ABYSS_MOB_IDS, [
+      "焦炭亡魂", "深渊小鬼", "熔岩蹒跚者", "魂焰幽魂", "复生奴仆", "深坑幼魔", "受难之魂",
+      "焦炭守望者血蹄", "烈焰之子玛尔加扎", "巫妖领主维克鲁", "育母莎尔斯雷亚", "吞噬者莎尔戈雷斯",
+    ], 'abyss mob'),
+    items: phase11NameTranslations(ABYSS_ITEM_IDS, [
+      "大灾变之刃", "吞噬者之杖", "深渊之牙", "余烬铸造胸甲", "煤纹长袍", "灰烬潜行外衣",
+      "余烬铸造腿甲", "煤纹护腿", "灰烬潜行护腿", "余烬铸造胫甲", "煤纹凉鞋", "灰烬潜行便鞋",
+      "深渊余烬",
+    ], 'abyss item'),
+    dungeons: {
+      abyssal_maw: {
+        name: "深渊巨口",
+        enterText: "裂隙将你拽入炽热与灰烬之中——而在遥远的下方，某个庞然之物正在吐息。深渊巨口已经开启。",
+        leaveText: "你攀着裂隙向上爬回，回到山间冰冷的寒风之中。",
+      },
+    },
+  },
+  zh_TW: {
+    mobs: phase11NameTranslations(ABYSS_MOB_IDS, [
+      "焦炭亡魂", "深淵小鬼", "熔岩蹣跚者", "魂焰幽魂", "復生奴僕", "深坑幼魔", "受難之魂",
+      "焦炭守望者血蹄", "烈焰之子瑪爾加扎", "巫妖領主維克魯", "育母莎爾斯雷亞", "吞噬者莎爾戈雷斯",
+    ], 'abyss mob'),
+    items: phase11NameTranslations(ABYSS_ITEM_IDS, [
+      "大災變之刃", "吞噬者之杖", "深淵之牙", "餘燼鑄造胸甲", "煤紋長袍", "灰燼潛行外衣",
+      "餘燼鑄造腿甲", "煤紋護腿", "灰燼潛行護腿", "餘燼鑄造脛甲", "煤紋涼鞋", "灰燼潛行便鞋",
+      "深淵餘燼",
+    ], 'abyss item'),
+    dungeons: {
+      abyssal_maw: {
+        name: "深淵巨口",
+        enterText: "裂隙將你拽入熾熱與灰燼之中——而在遙遠的下方，某個龐然之物正在吐息。深淵巨口已經開啟。",
+        leaveText: "你攀著裂隙向上爬回，回到山間冰冷的寒風之中。",
+      },
+    },
+  },
+  ko_KR: {
+    mobs: phase11NameTranslations(ABYSS_MOB_IDS, [
+      "그을린 망령", "심연의 임프", "용암 비틀거리는 자", "영혼불꽃 망령", "되살아난 노예", "구덩이 새끼", "고통받는 영혼",
+      "잿불지기 고어후프", "화염출생 말가자르", "대리치 베크루", "어미 잘'스레아", "포식자 잘'고레스",
+    ], 'abyss mob'),
+    items: phase11NameTranslations(ABYSS_ITEM_IDS, [
+      "대격변의 칼날", "포식자의 지팡이", "심연의 송곳니", "타다 남은 불꽃으로 벼린 흉갑", "잿불천 로브", "잿불추적자 윗옷",
+      "타다 남은 불꽃으로 벼린 다리보호구", "잿불천 다리보호구", "잿불추적자 다리보호구", "타다 남은 불꽃으로 벼린 정강이받이", "잿불천 신발", "잿불추적자 신발",
+      "심연의 잿불",
+    ], 'abyss item'),
+    dungeons: {
+      abyssal_maw: {
+        name: "심연의 아가리",
+        enterText: "균열이 당신을 열기와 잿더미 속으로 끌어내립니다 — 그리고 저 아래 깊은 곳에서, 거대한 무언가가 숨을 들이쉽니다. 심연의 아가리가 열렸습니다.",
+        leaveText: "당신은 균열을 타고 다시 기어올라 차가운 산바람 속으로 나옵니다.",
+      },
+    },
+  },
+  ja_JP: {
+    mobs: phase11NameTranslations(ABYSS_MOB_IDS, [
+      "炭化せし亡霊", "奈落のインプ", "溶岩のよろめき", "魂炎の亡魂", "蘇りし下僕", "坑の落とし子", "苛まれし魂",
+      "灰守りゴアフーフ", "焔より生まれしマルガザル", "大リッチ・ヴェクル", "産み親ザル＝スレア", "貪り喰らうザル＝ゴレス",
+    ], 'abyss mob'),
+    items: phase11NameTranslations(ABYSS_ITEM_IDS, [
+      "カタクリズムの刃", "貪食者の杖", "奈落の牙", "燠火打ちの胸当て", "燻り織りのローブ", "灰追いの上着",
+      "燠火打ちの脚甲", "燻り織りの脚衣", "灰追いの脚甲", "燠火打ちの具足", "燻り織りのサンダル", "灰追いの履物",
+      "奈落の燠火",
+    ], 'abyss item'),
+    dungeons: {
+      abyssal_maw: {
+        name: "奈落の顎",
+        enterText: "裂け目があなたを熱と灰の中へ引きずり込む——そしてはるか下方で、巨大な何かが息を吸う。奈落の顎が開いた。",
+        leaveText: "あなたは裂け目をよじ登り、冷たい山の風の中へと這い出る。",
+      },
+    },
+  },
+  pt_BR: {
+    mobs: phase11NameTranslations(ABYSS_MOB_IDS, [
+      "Renascido Carbonizado", "Diabrete Abissal", "Cambaleante de Magma", "Espectro de Almachama", "Servo Ressurgido", "Cria do Fosso", "Alma Atormentada",
+      "Cascossangrento o Guardião das Cinzas", "Malgazzar o Nascido das Chamas", "Arquilich Vekru", "Mãe da Ninhada Xal'Threa", "Xal'Goreth, o Devorador",
+    ], 'abyss mob'),
+    items: phase11NameTranslations(ABYSS_ITEM_IDS, [
+      "Gume do Cataclismo", "Cajado do Devorador", "Presa do Abismo", "Peitoral Forjado em Brasa", "Manto Tecido em Cinzas", "Jaqueta do Espreita-Cinzas",
+      "Perneiras Forjadas em Brasa", "Calças Tecidas em Cinzas", "Perneiras do Espreita-Cinzas", "Greva Forjada em Brasa", "Sandálias Tecidas em Cinzas", "Botas do Espreita-Cinzas",
+      "Brasa Abissal",
+    ], 'abyss item'),
+    dungeons: {
+      abyssal_maw: {
+        name: "As Fauces Abissais",
+        enterText: "A fenda o arrasta para baixo, para o calor e a cinza — e bem lá embaixo, algo imenso toma fôlego. As Fauces Abissais se abriram.",
+        leaveText: "Você sobe se agarrando pela fenda de volta ao vento frio da montanha.",
+      },
+    },
+  },
+  ru_RU: {
+    mobs: phase11NameTranslations(ABYSS_MOB_IDS, [
+      "Обугленный выходец", "Бездонный бес", "Расплавленный ковыляющий", "Душепламенный призрак", "Восставший прислужник", "Отродье ямы", "Измученная душа",
+      "Кровокопыт, Хранитель пепла", "Малгаззар Пламенорождённый", "Архилич Векру", "Выводковая мать Зал'Трея", "Зал'Горет, Пожиратель",
+    ], 'abyss mob'),
+    items: phase11NameTranslations(ABYSS_ITEM_IDS, [
+      "Грань катаклизма", "Посох Пожирателя", "Клык бездны", "Кираса, кованная в углях", "Роба из пепельной пряжи", "Куртка Пеплохода",
+      "Поножи, кованные в углях", "Штаны из пепельной пряжи", "Поножи Пеплохода", "Латные башмаки, кованные в углях", "Сандалии из пепельной пряжи", "Сапоги Пеплохода",
+      "Бездонный уголёк",
+    ], 'abyss item'),
+    dungeons: {
+      abyssal_maw: {
+        name: "Бездонная Пасть",
+        enterText: "Разлом утягивает тебя вниз, в жар и пепел, — а далеко внизу нечто огромное делает вдох. Бездонная Пасть открылась.",
+        leaveText: "Ты карабкаешься обратно вверх сквозь разлом, на холодный горный ветер.",
+      },
+    },
+  },
+  es_ES: {} as typeof abyssExtraEn,
+  fr_CA: {} as typeof abyssExtraEn,
+  en_CA: abyssExtraEn,
+};
+abyssExtra.es_ES = abyssExtra.es;
+abyssExtra.fr_CA = abyssExtra.fr_FR;
+
+// The Abyssal Maw boss-mechanic warning banners (sim emits these via voidZone
+// warnKey / boss telegraphs). Each value keeps the {name} placeholder. Added as
+// a top-level `raidWarn` key on every locale object below; en_CA reuses English.
+const raidWarnTranslationsEn = {
+  stomp: "{name} raises a colossal fist — scatter from the slam!",
+  enrage: "{name} flies into a furious rage!",
+  summon: "{name} calls reinforcements from the pit!",
+  soulDetonation: "{name} marks the ground beneath you — flee the Soul Detonation!",
+  causticPool: "{name} floods the ground with a Caustic Pool — move clear!",
+  cataclysm: "{name} gathers a Cataclysm — get out of the fire!",
+};
+
+const raidWarn = {
+  en: raidWarnTranslationsEn,
+  es: {
+    stomp: "¡{name} alza un puño colosal — dispersaos del golpe!",
+    enrage: "¡{name} estalla en una furia despiadada!",
+    summon: "¡{name} llama refuerzos desde el foso!",
+    soulDetonation: "¡{name} marca el suelo bajo tus pies — huye de la Detonación de Almas!",
+    causticPool: "¡{name} inunda el suelo con un Charco Cáustico — apártate!",
+    cataclysm: "¡{name} reúne un Cataclismo — sal del fuego!",
+  },
+  es_ES: {
+    stomp: "¡{name} alza un puño colosal — dispersaos del golpe!",
+    enrage: "¡{name} estalla en una furia despiadada!",
+    summon: "¡{name} llama refuerzos desde el foso!",
+    soulDetonation: "¡{name} marca el suelo bajo tus pies — huye de la Detonación de Almas!",
+    causticPool: "¡{name} inunda el suelo con un Charco Cáustico — apártate!",
+    cataclysm: "¡{name} reúne un Cataclismo — sal del fuego!",
+  },
+  fr_FR: {
+    stomp: "{name} lève un poing colossal — dispersez-vous avant l'impact !",
+    enrage: "{name} entre dans une rage furieuse !",
+    summon: "{name} appelle des renforts depuis la fosse !",
+    soulDetonation: "{name} marque le sol sous vos pieds — fuyez la Détonation d'âme !",
+    causticPool: "{name} inonde le sol d'une Mare caustique — écartez-vous !",
+    cataclysm: "{name} prépare un Cataclysme — sortez du feu !",
+  },
+  fr_CA: {
+    stomp: "{name} lève un poing colossal — dispersez-vous avant l'impact !",
+    enrage: "{name} entre dans une rage furieuse !",
+    summon: "{name} appelle des renforts depuis la fosse !",
+    soulDetonation: "{name} marque le sol sous vos pieds — fuyez la Détonation d'âme !",
+    causticPool: "{name} inonde le sol d'une Mare caustique — écartez-vous !",
+    cataclysm: "{name} prépare un Cataclysme — sortez du feu !",
+  },
+  en_CA: raidWarnTranslationsEn,
+  it_IT: {
+    stomp: "{name} solleva un pugno colossale — disperdetevi dall'impatto!",
+    enrage: "{name} esplode in una furia feroce!",
+    summon: "{name} chiama rinforzi dalla fossa!",
+    soulDetonation: "{name} marchia il terreno sotto di te — fuggi dalla Detonazione d'Anime!",
+    causticPool: "{name} allaga il terreno con una Pozza Caustica — spostati!",
+    cataclysm: "{name} raduna un Cataclisma — esci dal fuoco!",
+  },
+  de_DE: {
+    stomp: "{name} hebt eine kolossale Faust — verteilt euch vor dem Schlag!",
+    enrage: "{name} gerät in wütende Raserei!",
+    summon: "{name} ruft Verstärkung aus der Grube!",
+    soulDetonation: "{name} markiert den Boden unter Euch — flieht vor der Seelendetonation!",
+    causticPool: "{name} überflutet den Boden mit einem Ätzenden Tümpel — geht aus dem Weg!",
+    cataclysm: "{name} sammelt einen Kataklysmus — raus aus dem Feuer!",
+  },
+  zh_CN: {
+    stomp: "{name}举起一只巨大的拳头——散开，躲避猛击！",
+    enrage: "{name}陷入了狂暴的怒火！",
+    summon: "{name}从深坑中召唤了增援！",
+    soulDetonation: "{name}在你脚下标记了地面——快逃离灵魂爆轰！",
+    causticPool: "{name}用腐蚀之池淹没了地面——快离开！",
+    cataclysm: "{name}正在汇聚大灾变——离开火焰！",
+  },
+  zh_TW: {
+    stomp: "{name}舉起一隻巨大的拳頭——散開，躲避猛擊！",
+    enrage: "{name}陷入了狂暴的怒火！",
+    summon: "{name}從深坑中召喚了增援！",
+    soulDetonation: "{name}在你腳下標記了地面——快逃離靈魂爆轟！",
+    causticPool: "{name}用腐蝕之池淹沒了地面——快離開！",
+    cataclysm: "{name}正在匯聚大災變——離開火焰！",
+  },
+  ko_KR: {
+    stomp: "{name}이(가) 거대한 주먹을 치켜듭니다 — 강타를 피해 흩어지십시오!",
+    enrage: "{name}이(가) 맹렬한 분노에 휩싸입니다!",
+    summon: "{name}이(가) 구덩이에서 증원군을 부릅니다!",
+    soulDetonation: "{name}이(가) 당신의 발밑을 표시합니다 — 영혼 폭발을 피해 도망치십시오!",
+    causticPool: "{name}이(가) 부식성 웅덩이로 바닥을 뒤덮습니다 — 비켜나십시오!",
+    cataclysm: "{name}이(가) 대격변을 모읍니다 — 불길에서 벗어나십시오!",
+  },
+  ja_JP: {
+    stomp: "{name}が巨大な拳を振り上げる——叩きつけから散開しろ！",
+    enrage: "{name}が猛烈な怒りに駆られる！",
+    summon: "{name}が坑から増援を呼ぶ！",
+    soulDetonation: "{name}が足元の地面に印を付ける——ソウル・デトネーションから逃げろ！",
+    causticPool: "{name}が地面を腐食の池で満たす——その場から離れろ！",
+    cataclysm: "{name}がカタクリズムを集める——炎から離れろ！",
+  },
+  pt_BR: {
+    stomp: "{name} ergue um punho colossal — dispersem-se do impacto!",
+    enrage: "{name} entra em uma fúria feroz!",
+    summon: "{name} chama reforços do fosso!",
+    soulDetonation: "{name} marca o chão sob os seus pés — fuja da Detonação de Almas!",
+    causticPool: "{name} inunda o chão com uma Poça Cáustica — saia de perto!",
+    cataclysm: "{name} reúne um Cataclismo — saia do fogo!",
+  },
+  ru_RU: {
+    stomp: "{name} заносит исполинский кулак — рассредоточьтесь от удара!",
+    enrage: "{name} впадает в неистовую ярость!",
+    summon: "{name} призывает подкрепление из ямы!",
+    soulDetonation: "{name} отмечает землю под тобой — беги от Детонации душ!",
+    causticPool: "{name} заливает землю Едкой лужей — отойди в сторону!",
+    cataclysm: "{name} собирает Катаклизм — прочь из огня!",
+  },
+};
 
 // In-game HUD strings for the Max-Level XP Overflow / post-cap progression
 // system. These route through t() per the i18n constraint; each supported
@@ -11069,15 +11406,16 @@ export const en = {
   ...phase8.en,
   ...phase9.en,
   ...phase11.en,
+  raidWarn: raidWarn.en,
   entities: {
     ...phase8.en.entities,
     ...phase9.en.entities,
     abilities: { ...phase8.en.entities.abilities, ...phase11Extra.en.abilities },
-    items: { ...phase8.en.entities.items, ...phase11Entities.en.items, ...phase11Extra.en.items },
-    mobs: { ...phase9.en.entities.mobs, ...phase11Entities.en.mobs, ...phase11Extra.en.mobs },
+    items: { ...phase8.en.entities.items, ...phase11Entities.en.items, ...phase11Extra.en.items, ...abyssExtra.en.items },
+    mobs: { ...phase9.en.entities.mobs, ...phase11Entities.en.mobs, ...phase11Extra.en.mobs, ...abyssExtra.en.mobs },
     npcs: { ...phase9.en.entities.npcs, ...phase11Extra.en.npcs },
     quests: { ...phase9.en.entities.quests, ...phase11Entities.en.quests, ...phase11Extra.en.quests },
-    dungeons: { ...phase9.en.entities.dungeons, ...phase11Extra.en.dungeons },
+    dungeons: { ...phase9.en.entities.dungeons, ...phase11Extra.en.dungeons, ...abyssExtra.en.dungeons },
   },
 };
 
@@ -11223,15 +11561,16 @@ export const es: typeof en = {
   ...phase8.es,
   ...phase9.es,
   ...phase11.es,
+  raidWarn: raidWarn.es,
   entities: {
     ...phase8.es.entities,
     ...phase9.es.entities,
     abilities: { ...phase8.es.entities.abilities, ...phase11Extra.es.abilities },
-    items: { ...phase8.es.entities.items, ...phase11Entities.es.items, ...phase11Extra.es.items },
-    mobs: { ...phase9.es.entities.mobs, ...phase11Entities.es.mobs, ...phase11Extra.es.mobs },
+    items: { ...phase8.es.entities.items, ...phase11Entities.es.items, ...phase11Extra.es.items, ...abyssExtra.es.items },
+    mobs: { ...phase9.es.entities.mobs, ...phase11Entities.es.mobs, ...phase11Extra.es.mobs, ...abyssExtra.es.mobs },
     npcs: { ...phase9.es.entities.npcs, ...phase11Extra.es.npcs },
     quests: { ...phase9.es.entities.quests, ...phase11Entities.es.quests, ...phase11Extra.es.quests },
-    dungeons: { ...phase9.es.entities.dungeons, ...phase11Extra.es.dungeons },
+    dungeons: { ...phase9.es.entities.dungeons, ...phase11Extra.es.dungeons, ...abyssExtra.es.dungeons },
   },
 };
 
@@ -11377,15 +11716,16 @@ export const es_ES: typeof en = {
   ...phase8.es_ES,
   ...phase9.es_ES,
   ...phase11.es_ES,
+  raidWarn: raidWarn.es_ES,
   entities: {
     ...phase8.es_ES.entities,
     ...phase9.es_ES.entities,
     abilities: { ...phase8.es_ES.entities.abilities, ...phase11Extra.es_ES.abilities },
-    items: { ...phase8.es_ES.entities.items, ...phase11Entities.es_ES.items, ...phase11Extra.es_ES.items },
-    mobs: { ...phase9.es_ES.entities.mobs, ...phase11Entities.es_ES.mobs, ...phase11Extra.es_ES.mobs },
+    items: { ...phase8.es_ES.entities.items, ...phase11Entities.es_ES.items, ...phase11Extra.es_ES.items, ...abyssExtra.es_ES.items },
+    mobs: { ...phase9.es_ES.entities.mobs, ...phase11Entities.es_ES.mobs, ...phase11Extra.es_ES.mobs, ...abyssExtra.es_ES.mobs },
     npcs: { ...phase9.es_ES.entities.npcs, ...phase11Extra.es_ES.npcs },
     quests: { ...phase9.es_ES.entities.quests, ...phase11Entities.es_ES.quests, ...phase11Extra.es_ES.quests },
-    dungeons: { ...phase9.es_ES.entities.dungeons, ...phase11Extra.es_ES.dungeons },
+    dungeons: { ...phase9.es_ES.entities.dungeons, ...phase11Extra.es_ES.dungeons, ...abyssExtra.es_ES.dungeons },
   },
 };
 
@@ -11531,15 +11871,16 @@ export const fr_FR: typeof en = {
   ...phase8.fr_FR,
   ...phase9.fr_FR,
   ...phase11.fr_FR,
+  raidWarn: raidWarn.fr_FR,
   entities: {
     ...phase8.fr_FR.entities,
     ...phase9.fr_FR.entities,
     abilities: { ...phase8.fr_FR.entities.abilities, ...phase11Extra.fr_FR.abilities },
-    items: { ...phase8.fr_FR.entities.items, ...phase11Entities.fr_FR.items, ...phase11Extra.fr_FR.items },
-    mobs: { ...phase9.fr_FR.entities.mobs, ...phase11Entities.fr_FR.mobs, ...phase11Extra.fr_FR.mobs },
+    items: { ...phase8.fr_FR.entities.items, ...phase11Entities.fr_FR.items, ...phase11Extra.fr_FR.items, ...abyssExtra.fr_FR.items },
+    mobs: { ...phase9.fr_FR.entities.mobs, ...phase11Entities.fr_FR.mobs, ...phase11Extra.fr_FR.mobs, ...abyssExtra.fr_FR.mobs },
     npcs: { ...phase9.fr_FR.entities.npcs, ...phase11Extra.fr_FR.npcs },
     quests: { ...phase9.fr_FR.entities.quests, ...phase11Entities.fr_FR.quests, ...phase11Extra.fr_FR.quests },
-    dungeons: { ...phase9.fr_FR.entities.dungeons, ...phase11Extra.fr_FR.dungeons },
+    dungeons: { ...phase9.fr_FR.entities.dungeons, ...phase11Extra.fr_FR.dungeons, ...abyssExtra.fr_FR.dungeons },
   },
 };
 
@@ -11685,15 +12026,16 @@ export const fr_CA: typeof en = {
   ...phase8.fr_CA,
   ...phase9.fr_CA,
   ...phase11.fr_CA,
+  raidWarn: raidWarn.fr_CA,
   entities: {
     ...phase8.fr_CA.entities,
     ...phase9.fr_CA.entities,
     abilities: { ...phase8.fr_CA.entities.abilities, ...phase11Extra.fr_CA.abilities },
-    items: { ...phase8.fr_CA.entities.items, ...phase11Entities.fr_CA.items, ...phase11Extra.fr_CA.items },
-    mobs: { ...phase9.fr_CA.entities.mobs, ...phase11Entities.fr_CA.mobs, ...phase11Extra.fr_CA.mobs },
+    items: { ...phase8.fr_CA.entities.items, ...phase11Entities.fr_CA.items, ...phase11Extra.fr_CA.items, ...abyssExtra.fr_CA.items },
+    mobs: { ...phase9.fr_CA.entities.mobs, ...phase11Entities.fr_CA.mobs, ...phase11Extra.fr_CA.mobs, ...abyssExtra.fr_CA.mobs },
     npcs: { ...phase9.fr_CA.entities.npcs, ...phase11Extra.fr_CA.npcs },
     quests: { ...phase9.fr_CA.entities.quests, ...phase11Entities.fr_CA.quests, ...phase11Extra.fr_CA.quests },
-    dungeons: { ...phase9.fr_CA.entities.dungeons, ...phase11Extra.fr_CA.dungeons },
+    dungeons: { ...phase9.fr_CA.entities.dungeons, ...phase11Extra.fr_CA.dungeons, ...abyssExtra.fr_CA.dungeons },
   },
 };
 
@@ -11839,15 +12181,16 @@ export const en_CA: typeof en = {
   ...phase8.en_CA,
   ...phase9.en_CA,
   ...phase11.en_CA,
+  raidWarn: raidWarn.en_CA,
   entities: {
     ...phase8.en_CA.entities,
     ...phase9.en_CA.entities,
     abilities: { ...phase8.en_CA.entities.abilities, ...phase11Extra.en_CA.abilities },
-    items: { ...phase8.en_CA.entities.items, ...phase11Entities.en_CA.items, ...phase11Extra.en_CA.items },
-    mobs: { ...phase9.en_CA.entities.mobs, ...phase11Entities.en_CA.mobs, ...phase11Extra.en_CA.mobs },
+    items: { ...phase8.en_CA.entities.items, ...phase11Entities.en_CA.items, ...phase11Extra.en_CA.items, ...abyssExtra.en_CA.items },
+    mobs: { ...phase9.en_CA.entities.mobs, ...phase11Entities.en_CA.mobs, ...phase11Extra.en_CA.mobs, ...abyssExtra.en_CA.mobs },
     npcs: { ...phase9.en_CA.entities.npcs, ...phase11Extra.en_CA.npcs },
     quests: { ...phase9.en_CA.entities.quests, ...phase11Entities.en_CA.quests, ...phase11Extra.en_CA.quests },
-    dungeons: { ...phase9.en_CA.entities.dungeons, ...phase11Extra.en_CA.dungeons },
+    dungeons: { ...phase9.en_CA.entities.dungeons, ...phase11Extra.en_CA.dungeons, ...abyssExtra.en_CA.dungeons },
   },
 };
 
@@ -11993,15 +12336,16 @@ export const it_IT: typeof en = {
   ...phase8.it_IT,
   ...phase9.it_IT,
   ...phase11.it_IT,
+  raidWarn: raidWarn.it_IT,
   entities: {
     ...phase8.it_IT.entities,
     ...phase9.it_IT.entities,
     abilities: { ...phase8.it_IT.entities.abilities, ...phase11Extra.it_IT.abilities },
-    items: { ...phase8.it_IT.entities.items, ...phase11Entities.it_IT.items, ...phase11Extra.it_IT.items },
-    mobs: { ...phase9.it_IT.entities.mobs, ...phase11Entities.it_IT.mobs, ...phase11Extra.it_IT.mobs },
+    items: { ...phase8.it_IT.entities.items, ...phase11Entities.it_IT.items, ...phase11Extra.it_IT.items, ...abyssExtra.it_IT.items },
+    mobs: { ...phase9.it_IT.entities.mobs, ...phase11Entities.it_IT.mobs, ...phase11Extra.it_IT.mobs, ...abyssExtra.it_IT.mobs },
     npcs: { ...phase9.it_IT.entities.npcs, ...phase11Extra.it_IT.npcs },
     quests: { ...phase9.it_IT.entities.quests, ...phase11Entities.it_IT.quests, ...phase11Extra.it_IT.quests },
-    dungeons: { ...phase9.it_IT.entities.dungeons, ...phase11Extra.it_IT.dungeons },
+    dungeons: { ...phase9.it_IT.entities.dungeons, ...phase11Extra.it_IT.dungeons, ...abyssExtra.it_IT.dungeons },
   },
 };
 
@@ -12147,15 +12491,16 @@ export const de_DE: typeof en = {
   ...phase8.de_DE,
   ...phase9.de_DE,
   ...phase11.de_DE,
+  raidWarn: raidWarn.de_DE,
   entities: {
     ...phase8.de_DE.entities,
     ...phase9.de_DE.entities,
     abilities: { ...phase8.de_DE.entities.abilities, ...phase11Extra.de_DE.abilities },
-    items: { ...phase8.de_DE.entities.items, ...phase11Entities.de_DE.items, ...phase11Extra.de_DE.items },
-    mobs: { ...phase9.de_DE.entities.mobs, ...phase11Entities.de_DE.mobs, ...phase11Extra.de_DE.mobs },
+    items: { ...phase8.de_DE.entities.items, ...phase11Entities.de_DE.items, ...phase11Extra.de_DE.items, ...abyssExtra.de_DE.items },
+    mobs: { ...phase9.de_DE.entities.mobs, ...phase11Entities.de_DE.mobs, ...phase11Extra.de_DE.mobs, ...abyssExtra.de_DE.mobs },
     npcs: { ...phase9.de_DE.entities.npcs, ...phase11Extra.de_DE.npcs },
     quests: { ...phase9.de_DE.entities.quests, ...phase11Entities.de_DE.quests, ...phase11Extra.de_DE.quests },
-    dungeons: { ...phase9.de_DE.entities.dungeons, ...phase11Extra.de_DE.dungeons },
+    dungeons: { ...phase9.de_DE.entities.dungeons, ...phase11Extra.de_DE.dungeons, ...abyssExtra.de_DE.dungeons },
   },
 };
 
@@ -12301,15 +12646,16 @@ export const zh_CN: typeof en = {
   ...phase8.zh_CN,
   ...phase9.zh_CN,
   ...phase11.zh_CN,
+  raidWarn: raidWarn.zh_CN,
   entities: {
     ...phase8.zh_CN.entities,
     ...phase9.zh_CN.entities,
     abilities: { ...phase8.zh_CN.entities.abilities, ...phase11Extra.zh_CN.abilities },
-    items: { ...phase8.zh_CN.entities.items, ...phase11Entities.zh_CN.items, ...phase11Extra.zh_CN.items },
-    mobs: { ...phase9.zh_CN.entities.mobs, ...phase11Entities.zh_CN.mobs, ...phase11Extra.zh_CN.mobs },
+    items: { ...phase8.zh_CN.entities.items, ...phase11Entities.zh_CN.items, ...phase11Extra.zh_CN.items, ...abyssExtra.zh_CN.items },
+    mobs: { ...phase9.zh_CN.entities.mobs, ...phase11Entities.zh_CN.mobs, ...phase11Extra.zh_CN.mobs, ...abyssExtra.zh_CN.mobs },
     npcs: { ...phase9.zh_CN.entities.npcs, ...phase11Extra.zh_CN.npcs },
     quests: { ...phase9.zh_CN.entities.quests, ...phase11Entities.zh_CN.quests, ...phase11Extra.zh_CN.quests },
-    dungeons: { ...phase9.zh_CN.entities.dungeons, ...phase11Extra.zh_CN.dungeons },
+    dungeons: { ...phase9.zh_CN.entities.dungeons, ...phase11Extra.zh_CN.dungeons, ...abyssExtra.zh_CN.dungeons },
   },
 };
 
@@ -12455,15 +12801,16 @@ export const zh_TW: typeof en = {
   ...phase8.zh_TW,
   ...phase9.zh_TW,
   ...phase11.zh_TW,
+  raidWarn: raidWarn.zh_TW,
   entities: {
     ...phase8.zh_TW.entities,
     ...phase9.zh_TW.entities,
     abilities: { ...phase8.zh_TW.entities.abilities, ...phase11Extra.zh_TW.abilities },
-    items: { ...phase8.zh_TW.entities.items, ...phase11Entities.zh_TW.items, ...phase11Extra.zh_TW.items },
-    mobs: { ...phase9.zh_TW.entities.mobs, ...phase11Entities.zh_TW.mobs, ...phase11Extra.zh_TW.mobs },
+    items: { ...phase8.zh_TW.entities.items, ...phase11Entities.zh_TW.items, ...phase11Extra.zh_TW.items, ...abyssExtra.zh_TW.items },
+    mobs: { ...phase9.zh_TW.entities.mobs, ...phase11Entities.zh_TW.mobs, ...phase11Extra.zh_TW.mobs, ...abyssExtra.zh_TW.mobs },
     npcs: { ...phase9.zh_TW.entities.npcs, ...phase11Extra.zh_TW.npcs },
     quests: { ...phase9.zh_TW.entities.quests, ...phase11Entities.zh_TW.quests, ...phase11Extra.zh_TW.quests },
-    dungeons: { ...phase9.zh_TW.entities.dungeons, ...phase11Extra.zh_TW.dungeons },
+    dungeons: { ...phase9.zh_TW.entities.dungeons, ...phase11Extra.zh_TW.dungeons, ...abyssExtra.zh_TW.dungeons },
   },
 };
 
@@ -12609,15 +12956,16 @@ export const ko_KR: typeof en = {
   ...phase8.ko_KR,
   ...phase9.ko_KR,
   ...phase11.ko_KR,
+  raidWarn: raidWarn.ko_KR,
   entities: {
     ...phase8.ko_KR.entities,
     ...phase9.ko_KR.entities,
     abilities: { ...phase8.ko_KR.entities.abilities, ...phase11Extra.ko_KR.abilities },
-    items: { ...phase8.ko_KR.entities.items, ...phase11Entities.ko_KR.items, ...phase11Extra.ko_KR.items },
-    mobs: { ...phase9.ko_KR.entities.mobs, ...phase11Entities.ko_KR.mobs, ...phase11Extra.ko_KR.mobs },
+    items: { ...phase8.ko_KR.entities.items, ...phase11Entities.ko_KR.items, ...phase11Extra.ko_KR.items, ...abyssExtra.ko_KR.items },
+    mobs: { ...phase9.ko_KR.entities.mobs, ...phase11Entities.ko_KR.mobs, ...phase11Extra.ko_KR.mobs, ...abyssExtra.ko_KR.mobs },
     npcs: { ...phase9.ko_KR.entities.npcs, ...phase11Extra.ko_KR.npcs },
     quests: { ...phase9.ko_KR.entities.quests, ...phase11Entities.ko_KR.quests, ...phase11Extra.ko_KR.quests },
-    dungeons: { ...phase9.ko_KR.entities.dungeons, ...phase11Extra.ko_KR.dungeons },
+    dungeons: { ...phase9.ko_KR.entities.dungeons, ...phase11Extra.ko_KR.dungeons, ...abyssExtra.ko_KR.dungeons },
   },
 };
 
@@ -12763,15 +13111,16 @@ export const ja_JP: typeof en = {
   ...phase8.ja_JP,
   ...phase9.ja_JP,
   ...phase11.ja_JP,
+  raidWarn: raidWarn.ja_JP,
   entities: {
     ...phase8.ja_JP.entities,
     ...phase9.ja_JP.entities,
     abilities: { ...phase8.ja_JP.entities.abilities, ...phase11Extra.ja_JP.abilities },
-    items: { ...phase8.ja_JP.entities.items, ...phase11Entities.ja_JP.items, ...phase11Extra.ja_JP.items },
-    mobs: { ...phase9.ja_JP.entities.mobs, ...phase11Entities.ja_JP.mobs, ...phase11Extra.ja_JP.mobs },
+    items: { ...phase8.ja_JP.entities.items, ...phase11Entities.ja_JP.items, ...phase11Extra.ja_JP.items, ...abyssExtra.ja_JP.items },
+    mobs: { ...phase9.ja_JP.entities.mobs, ...phase11Entities.ja_JP.mobs, ...phase11Extra.ja_JP.mobs, ...abyssExtra.ja_JP.mobs },
     npcs: { ...phase9.ja_JP.entities.npcs, ...phase11Extra.ja_JP.npcs },
     quests: { ...phase9.ja_JP.entities.quests, ...phase11Entities.ja_JP.quests, ...phase11Extra.ja_JP.quests },
-    dungeons: { ...phase9.ja_JP.entities.dungeons, ...phase11Extra.ja_JP.dungeons },
+    dungeons: { ...phase9.ja_JP.entities.dungeons, ...phase11Extra.ja_JP.dungeons, ...abyssExtra.ja_JP.dungeons },
   },
 };
 
@@ -12917,15 +13266,16 @@ export const pt_BR: typeof en = {
   ...phase8.pt_BR,
   ...phase9.pt_BR,
   ...phase11.pt_BR,
+  raidWarn: raidWarn.pt_BR,
   entities: {
     ...phase8.pt_BR.entities,
     ...phase9.pt_BR.entities,
     abilities: { ...phase8.pt_BR.entities.abilities, ...phase11Extra.pt_BR.abilities },
-    items: { ...phase8.pt_BR.entities.items, ...phase11Entities.pt_BR.items, ...phase11Extra.pt_BR.items },
-    mobs: { ...phase9.pt_BR.entities.mobs, ...phase11Entities.pt_BR.mobs, ...phase11Extra.pt_BR.mobs },
+    items: { ...phase8.pt_BR.entities.items, ...phase11Entities.pt_BR.items, ...phase11Extra.pt_BR.items, ...abyssExtra.pt_BR.items },
+    mobs: { ...phase9.pt_BR.entities.mobs, ...phase11Entities.pt_BR.mobs, ...phase11Extra.pt_BR.mobs, ...abyssExtra.pt_BR.mobs },
     npcs: { ...phase9.pt_BR.entities.npcs, ...phase11Extra.pt_BR.npcs },
     quests: { ...phase9.pt_BR.entities.quests, ...phase11Entities.pt_BR.quests, ...phase11Extra.pt_BR.quests },
-    dungeons: { ...phase9.pt_BR.entities.dungeons, ...phase11Extra.pt_BR.dungeons },
+    dungeons: { ...phase9.pt_BR.entities.dungeons, ...phase11Extra.pt_BR.dungeons, ...abyssExtra.pt_BR.dungeons },
   },
 };
 
@@ -13071,15 +13421,16 @@ export const ru_RU: typeof en = {
   ...phase8.ru_RU,
   ...phase9.ru_RU,
   ...phase11.ru_RU,
+  raidWarn: raidWarn.ru_RU,
   entities: {
     ...phase8.ru_RU.entities,
     ...phase9.ru_RU.entities,
     abilities: { ...phase8.ru_RU.entities.abilities, ...phase11Extra.ru_RU.abilities },
-    items: { ...phase8.ru_RU.entities.items, ...phase11Entities.ru_RU.items, ...phase11Extra.ru_RU.items },
-    mobs: { ...phase9.ru_RU.entities.mobs, ...phase11Entities.ru_RU.mobs, ...phase11Extra.ru_RU.mobs },
+    items: { ...phase8.ru_RU.entities.items, ...phase11Entities.ru_RU.items, ...phase11Extra.ru_RU.items, ...abyssExtra.ru_RU.items },
+    mobs: { ...phase9.ru_RU.entities.mobs, ...phase11Entities.ru_RU.mobs, ...phase11Extra.ru_RU.mobs, ...abyssExtra.ru_RU.mobs },
     npcs: { ...phase9.ru_RU.entities.npcs, ...phase11Extra.ru_RU.npcs },
     quests: { ...phase9.ru_RU.entities.quests, ...phase11Entities.ru_RU.quests, ...phase11Extra.ru_RU.quests },
-    dungeons: { ...phase9.ru_RU.entities.dungeons, ...phase11Extra.ru_RU.dungeons },
+    dungeons: { ...phase9.ru_RU.entities.dungeons, ...phase11Extra.ru_RU.dungeons, ...abyssExtra.ru_RU.dungeons },
   },
 };
 

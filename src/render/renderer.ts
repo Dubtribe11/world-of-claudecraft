@@ -667,6 +667,55 @@ export class Renderer {
       case 'levelup':
         this.vfx.levelUpPillar(this.sim.playerId);
         break;
+      case 'telegraph':
+        this.spawnTelegraph(ev.x, ev.z, ev.radius, ev.duration, ev.school);
+        break;
+    }
+  }
+
+  // Telegraphed ground hazards (boss Void Zones): a pulsing warning ring that
+  // brightens as the eruption nears, then flashes. Infrequent, so per-spawn
+  // allocation is fine; the per-frame update only mutates opacity.
+  private telegraphs: { mesh: THREE.Mesh; ring: THREE.Mesh; age: number; duration: number }[] = [];
+  private static TELEGRAPH_COLORS: Record<string, number> = {
+    fire: 0xff5a18, nature: 0x66dd33, shadow: 0x9b30ff, frost: 0x49b6ff,
+    arcane: 0xc36bff, holy: 0xffe08a, physical: 0xff7a2a,
+  };
+
+  private spawnTelegraph(x: number, z: number, radius: number, duration: number, school: string): void {
+    const color = Renderer.TELEGRAPH_COLORS[school] ?? 0xff5a18;
+    const disc = new THREE.Mesh(
+      new THREE.CircleGeometry(radius, 36).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }),
+    );
+    disc.position.set(x, 0.18, z);
+    disc.renderOrder = 3;
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(radius * 0.85, radius, 40).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }),
+    );
+    ring.position.set(x, 0.19, z);
+    ring.renderOrder = 3;
+    this.scene.add(disc, ring);
+    this.telegraphs.push({ mesh: disc, ring, age: 0, duration });
+  }
+
+  private updateTelegraphs(dt: number): void {
+    for (let i = this.telegraphs.length - 1; i >= 0; i--) {
+      const tg = this.telegraphs[i];
+      tg.age += dt;
+      const f = Math.min(1, tg.age / Math.max(0.1, tg.duration));
+      const pulse = 0.5 + 0.5 * Math.sin(this.time * 10);
+      (tg.mesh.material as THREE.MeshBasicMaterial).opacity = 0.14 + f * 0.4 + (f > 0.85 ? pulse * 0.5 : pulse * 0.12);
+      (tg.ring.material as THREE.MeshBasicMaterial).opacity = 0.45 + f * 0.45 + (f > 0.85 ? pulse * 0.4 : 0);
+      if (tg.age >= tg.duration + 0.25) {
+        this.scene.remove(tg.mesh, tg.ring);
+        tg.mesh.geometry.dispose();
+        (tg.mesh.material as THREE.Material).dispose();
+        tg.ring.geometry.dispose();
+        (tg.ring.material as THREE.Material).dispose();
+        this.telegraphs.splice(i, 1);
+      }
     }
   }
 
@@ -849,7 +898,7 @@ export class Renderer {
   // ---------------------------------------------------------------------
 
   private builtInteriors = new Set<string>();
-  private fogState: 'outdoor' | 'dungeon' | 'temple' | 'underwater' = 'outdoor';
+  private fogState: 'outdoor' | 'dungeon' | 'temple' | 'underworld' | 'underwater' = 'outdoor';
 
   private buildInterior(interior: string, ox: number, oz: number): void {
     this.dungeons ??= new DungeonInteriors(this.scene, this.lowGfx, this.flames, this.fireLights);
@@ -904,10 +953,13 @@ export class Renderer {
     }
     // the Drowned Temple reads as submerged: a teal murk instead of the
     // crypt's near-black, so its flooded halls feel underwater, not just dark
-    const inTemple = inside && !isArenaPos(px) && dungeonAt(px)?.interior === 'temple';
-    const desired = inTemple ? 'temple'
-      : inside ? 'dungeon'
-        : camY < WATER_LEVEL - 0.05 ? 'underwater' : 'outdoor';
+    const interiorKind = inside && !isArenaPos(px) ? dungeonAt(px)?.interior : undefined;
+    const inTemple = interiorKind === 'temple';
+    const inUnderworld = interiorKind === 'underworld';
+    const desired = inUnderworld ? 'underworld'
+      : inTemple ? 'temple'
+        : inside ? 'dungeon'
+          : camY < WATER_LEVEL - 0.05 ? 'underwater' : 'outdoor';
     const fog = this.scene.fog as THREE.Fog;
     if (desired !== this.fogState) {
       this.fogState = desired;
@@ -919,6 +971,13 @@ export class Renderer {
         fog.color.setHex(0x0a3a44);
         fog.near = 12;
         fog.far = 78;
+      } else if (desired === 'underworld') {
+        // the Abyssal Maw: a hot brimstone haze, dark red-brown so the lava
+        // glow and hellfire braziers read as the only real light (wider far
+        // than the crypt — the cavern is far larger than the nave)
+        fog.color.setHex(0x1c0700);
+        fog.near = 16;
+        fog.far = 115;
       } else if (desired === 'underwater') {
         fog.color.setHex(0x17506e);
         fog.near = 2;
@@ -933,7 +992,7 @@ export class Renderer {
       // underground so the torch point lights own the scene; restore outside.
       // The rim glow cranks up instead — silhouettes must split from the murk.
       if (!this.lowGfx) {
-        const underground = desired === 'dungeon' || desired === 'temple';
+        const underground = desired === 'dungeon' || desired === 'temple' || desired === 'underworld';
         this.sun.intensity = underground ? DUNGEON_SUN_INTENSITY : SUN_INTENSITY;
         this.hemi.intensity = underground ? DUNGEON_HEMI_INTENSITY : HEMI_INTENSITY;
         this.scene.environmentIntensity = underground ? DUNGEON_ENV_INTENSITY : this.envOutdoorIntensity;
@@ -1252,6 +1311,7 @@ export class Renderer {
       light.intensity = base + Math.sin(this.time * 11 + i * 1.7) * 2.5 * (base / 11);
     }
     this.budgetFireLights(p.pos.x, p.pos.z);
+    if (this.telegraphs.length) this.updateTelegraphs(dt);
 
     // clouds drift (the high cirrus layer crawls slower); on the lit tiers
     // they tint warm sunward / cool anti-sun to anchor the key light's azimuth

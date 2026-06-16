@@ -18,8 +18,8 @@ import { radialGlowTexture } from './textures';
 import { sharedUniforms } from './gfx';
 import { instanceOrigin } from '../sim/data';
 import {
-  ARENA_LAYOUT, CRYPT_LAYOUT, SANCTUM_LAYOUT, TEMPLE_LAYOUT, DUNGEON_WALL_X, TOMB_HD,
-  DungeonLayout, GridPoint, WallStub,
+  ARENA_LAYOUT, CRYPT_LAYOUT, SANCTUM_LAYOUT, TEMPLE_LAYOUT, UNDERWORLD_LAYOUT, DUNGEON_WALL_X, TOMB_HD,
+  DungeonLayout, GridPoint, WallStub, UnderworldLayout,
 } from '../sim/dungeon_layout';
 
 const FLAME_EMISSIVE_HIGH = 2.2;
@@ -34,7 +34,7 @@ const FLOOR_CELL = 4; // kit floor tiles are 4x4 at MODULE_SCALE 1
 const FLOOR_Y = -0.05; // tile tops sit 0.05 above origin; sink so tops land at y=0
 const PILLAR_XZ_SCALE = 1.3; // 1.5u kit pillar -> ~1.95u footprint (collider r=1)
 
-type Variant = 'crypt' | 'bastion' | 'sanctum' | 'temple' | 'arena';
+type Variant = 'crypt' | 'bastion' | 'sanctum' | 'temple' | 'arena' | 'underworld';
 
 interface TorchColors {
   flame: number;
@@ -50,6 +50,9 @@ const TORCH_COLORS: Record<Variant, TorchColors> = {
   temple: { flame: 0xd9c9ff, emissive: 0x6a4fd0, light: 0xb79cff },
   // the Ashen Coliseum burns warm — amber braziers ringing the fighting sands
   arena: { flame: 0xffb24a, emissive: 0xcc5a14, light: 0xff9a3c },
+  // the Abyssal Maw blazes hellfire-orange — warm flames (r > b) so the renderer
+  // flame loop sheds rising embers for free
+  underworld: { flame: 0xff7a1a, emissive: 0xcc2a00, light: 0xff5a2a },
 };
 
 // The Drowned Temple is flooded — a translucent, self-animating water sheet
@@ -266,6 +269,7 @@ export class DungeonInteriors {
   private flameGeo: THREE.BufferGeometry | null = null;
   private packMats = new Map<Pack, THREE.Material>();
   private waterMat: THREE.ShaderMaterial | null = null;
+  private lavaMat: THREE.ShaderMaterial | null = null;
 
   constructor(
     private scene: THREE.Scene,
@@ -276,6 +280,7 @@ export class DungeonInteriors {
 
   async buildInterior(interior: string, ox: number, oz: number): Promise<void> {
     await ensureDungeonAssets();
+    if (interior === 'underworld') { this.buildUnderworld(ox, oz); return; }
     const layout = interior === 'sanctum' ? SANCTUM_LAYOUT
       : interior === 'temple' ? TEMPLE_LAYOUT
         : interior === 'arena' ? ARENA_LAYOUT : CRYPT_LAYOUT;
@@ -410,8 +415,179 @@ export class DungeonInteriors {
     if (interior === 'arena') return 'arena';
     if (interior === 'sanctum') return 'sanctum';
     if (interior === 'temple') return 'temple';
+    if (interior === 'underworld') return 'underworld';
     const bastionX = instanceOrigin(1, 0).x;
     return ox >= (instanceOrigin(0, 0).x + bastionX) / 2 ? 'bastion' : 'crypt';
+  }
+
+  // -------------------------------------------------------------------------
+  // The Abyssal Maw (interior 'underworld'): a wide molten cavern, NOTHING like
+  // the straight crypt/temple nave. A charred obsidian floor flooded with lakes
+  // of self-animating lava (the recoloured temple-water shader), hellfire
+  // braziers, jagged shards, and the Devourer's throne island at the bottom.
+  // Built from UNDERWORLD_LAYOUT, the same data the colliders + lava hazard read.
+  // -------------------------------------------------------------------------
+
+  private buildUnderworld(ox: number, oz: number): void {
+    const L = UNDERWORLD_LAYOUT;
+    const colors = TORCH_COLORS.underworld;
+    const group = new THREE.Group();
+    const p = new Placements();
+
+    this.placeUnderworldFloor(p, L);
+    this.placeUnderworldWalls(p, L);
+    this.placeUnderworldShards(p, L);
+    this.placeUnderworldClutter(p);
+    this.placeUnderworldDais(group, p, L, colors);
+    this.placeUnderworldBraziers(group, p, L, colors); // torch meshes into p; flame/light/glow onto group
+    this.emit(group, p);
+    // self-animating shader lava lakes go on after the instanced kit emit
+    this.placeLava(group, L);
+
+    group.position.set(ox, 0, oz);
+    this.scene.add(group);
+  }
+
+  private lavaMaterial(): THREE.ShaderMaterial {
+    if (this.lavaMat) return this.lavaMat;
+    // reuse the temple-water shader, recoloured molten: bright orange shallows,
+    // deep-red troughs, white-hot caustic veins. Pushed past 1.0 so it blooms.
+    this.lavaMat = new THREE.ShaderMaterial({
+      uniforms: {
+        ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog),
+        uTime: sharedUniforms.uTime,
+        uShallow: { value: new THREE.Color(0xff8a2a) },
+        uDeep: { value: new THREE.Color(0x5a0e00) },
+        uGlow: { value: new THREE.Color(0xffd23a) },
+      },
+      vertexShader: TEMPLE_WATER_VERT,
+      fragmentShader: TEMPLE_WATER_FRAG,
+      transparent: true,
+      depthWrite: false,
+      fog: true,
+    });
+    return this.lavaMat;
+  }
+
+  // Self-animating lava sheets over each lake rect (the floor is drawn beneath
+  // them; the sheets are near-opaque so the lakes read as molten, not flooded).
+  private placeLava(group: THREE.Group, L: UnderworldLayout): void {
+    const mat = this.lavaMaterial();
+    for (const r of L.lava) {
+      const w = r.x1 - r.x0, d = r.z1 - r.z0;
+      const geo = new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2);
+      geo.translate((r.x0 + r.x1) / 2, 0.16, (r.z0 + r.z1) / 2);
+      const sheet = new THREE.Mesh(geo, mat);
+      sheet.renderOrder = 1; // floats just over the floor tiles
+      group.add(sheet);
+      // a couple of white-hot glow pools per lake for extra bloom
+      this.addTorchGlow(group, (r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2, 0xff5a18, 0.2, Math.min(3.2, w / 9));
+    }
+  }
+
+  private placeUnderworldFloor(p: Placements, L: UnderworldLayout): void {
+    const q = Math.PI / 2;
+    for (let z = L.bounds.z0 - 2; z <= L.bounds.z1 + 2; z += FLOOR_CELL) {
+      for (let x = L.bounds.x0; x <= L.bounds.x1; x += FLOOR_CELL) {
+        const kind = pickKind([
+          ['floor_dirt_large_rocky', 42], ['floor_tile_large_rocks', 28],
+          ['floor_dirt_large', 16], ['floor_tile_large', 14],
+        ], hash2(x * 1.31, z));
+        p.add(kind, x, FLOOR_Y, z, Math.floor(hash2(z, x) * 4) * q);
+      }
+    }
+  }
+
+  private underworldWallKind(t: number): string {
+    return pickKind([
+      ['wall', 34], ['wall_cracked', 30], ['wall_pillar', 18],
+      ['wall_arched', 10], ['wall_archedwindow_gated', 8],
+    ], t);
+  }
+
+  // Perimeter shell around the whole cavern (bounds far wider than the nave).
+  private placeUnderworldWalls(p: Placements, L: UnderworldLayout): void {
+    const b = L.bounds;
+    for (const sx of [b.x0, b.x1]) {
+      const ry = sx < 0 ? Math.PI / 2 : -Math.PI / 2;
+      for (let z = b.z0; z <= b.z1 + 2; z += 8) {
+        p.add(this.underworldWallKind(hash2(sx * 1.7, z)), sx, 0, z, ry, MODULE_SCALE);
+      }
+    }
+    for (const end of [{ z: b.z0, ry: 0 }, { z: b.z1, ry: Math.PI }]) {
+      for (let x = b.x0; x <= b.x1; x += 8) {
+        p.add(this.underworldWallKind(hash2(x, end.z * 3.1)), x, 0, end.z, end.ry, MODULE_SCALE);
+      }
+    }
+  }
+
+  // Jagged obsidian shards on the obstacle points (collider circles r=1.3).
+  private placeUnderworldShards(p: Placements, L: UnderworldLayout): void {
+    for (const pt of L.pillars) {
+      p.add('pillar', pt.x, 0, pt.z, hash2(pt.x, pt.z) * Math.PI, [1.6, MODULE_SCALE, 1.6]);
+      if (hash2(pt.z, pt.x) > 0.5) p.add('rubble_half', pt.x + 1.6, 0, pt.z, hash2(pt.x, pt.z) * 6, 1.1);
+    }
+  }
+
+  // Bones and broken coffins strewn across the safe lanes (hand-picked spots
+  // clear of the lava lakes).
+  private placeUnderworldClutter(p: Placements): void {
+    const spots: [number, number][] = [
+      [-40, 34], [-26, 46], [40, 72], [26, 84], [-40, 114], [-26, 124],
+      [40, 152], [26, 162], [-8, 58], [8, 98], [-8, 138], [0, 180],
+    ];
+    for (const [x, z] of spots) {
+      const r = hash2(x, z);
+      p.add('ribcage', x, 0.5, z, r * Math.PI * 2, 1.7);
+      p.add('bone_A', x + 1.2, 0.08, z + 0.9, r * 7, 1.9);
+      if (r > 0.4) p.add('skull', x - 1.0, 0, z - 0.8, r * 11, 1.3);
+      if (r > 0.6) p.add('coffin', x, 0, z + 2.0, hash2(z, x) * 0.4, [1.1, 1.3, 1.4]);
+    }
+  }
+
+  // The Devourer's throne island: a raised obsidian platform ringed with
+  // skull-candles, a great shrine at its back, and a hot glow pooled on top.
+  private placeUnderworldDais(group: THREE.Group, p: Placements, L: UnderworldLayout, colors: TorchColors): void {
+    const d = L.dais;
+    const q = Math.PI / 2;
+    for (let x = -16; x <= 16; x += 4) {
+      for (let z = -16; z <= 16; z += 4) {
+        if (Math.hypot(x, z) > d.r) continue;
+        p.add('floor_foundation_allsides', d.x + x, 0, d.z + z, Math.floor(hash2(x, z) * 4) * q, [1.85, 0.4, 1.85]);
+      }
+    }
+    this.addTorchGlow(group, d.x, d.z, colors.light, 0.74, 2.2);
+    p.add('shrine', d.x, 0.8, d.z + d.r - 1.8, Math.PI, 2.2);
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + 0.35;
+      const x = d.x + Math.sin(a) * (d.r - 1.6);
+      const z = d.z + Math.cos(a) * (d.r - 1.6);
+      p.add(i % 2 ? 'skull_candle' : 'candle_triple', x, 0.8, z, hash2(x, z) * Math.PI, 1.5);
+    }
+  }
+
+  // Hellfire braziers at the layout torch anchors: torch model accumulates into
+  // the shared Placements; flame mesh -> this.flames (warm, so the renderer
+  // flame loop sheds embers), point light -> this.fireLights.
+  private placeUnderworldBraziers(group: THREE.Group, p: Placements, L: UnderworldLayout, colors: TorchColors): void {
+    this.flameGeo ??= new THREE.ConeGeometry(0.22, 0.6, 6);
+    for (const t of L.torches) {
+      p.add('torch_mounted', t.x, 5.0, t.z, hash2(t.x, t.z) * Math.PI, 1.7);
+      const flame = new THREE.Mesh(this.flameGeo, new THREE.MeshLambertMaterial({
+        color: colors.flame, emissive: colors.emissive,
+        emissiveIntensity: this.lowGfx ? 1.6 : FLAME_EMISSIVE_HIGH,
+        transparent: true, opacity: 0.92,
+      }));
+      flame.position.set(t.x, 6.4, t.z);
+      group.add(flame);
+      this.flames.push(flame);
+      const light = new THREE.PointLight(colors.light, 10, this.lowGfx ? 22 : DUNGEON_LIGHT_DISTANCE, 2);
+      if (!this.lowGfx) light.userData.baseIntensity = DUNGEON_LIGHT_INTENSITY;
+      light.position.set(t.x, this.lowGfx ? 8.2 : DUNGEON_LIGHT_Y, t.z);
+      group.add(light);
+      this.fireLights.push(light);
+      this.addTorchGlow(group, t.x, t.z, colors.light);
+    }
   }
 
   private material(pack: Pack): THREE.Material {
