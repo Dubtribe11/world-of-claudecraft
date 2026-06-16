@@ -68,8 +68,8 @@ const TEMPLE_WATER_VERT = /* glsl */ `
     pos.y += sin(uTime * 1.3 + pos.x * 0.5) * 0.02 + sin(uTime * 0.9 + pos.z * 0.42) * 0.02;
     vec4 wp = modelMatrix * vec4(pos, 1.0);
     vWPos = wp.xyz;
-    vec4 mv = viewMatrix * wp;
-    gl_Position = projectionMatrix * mv;
+    vec4 mvPosition = viewMatrix * wp;
+    gl_Position = projectionMatrix * mvPosition;
     #include <fog_vertex>
   }
 `;
