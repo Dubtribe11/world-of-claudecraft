@@ -419,9 +419,14 @@ export class Hud {
     $('#mm-talents')?.addEventListener('click', () => this.toggleTalents());
     $('#mm-quest').addEventListener('click', () => this.toggleQuestLog());
     $('#mm-map').addEventListener('click', () => this.toggleMap());
-    $('#map-close').addEventListener('click', () => { $('#map-window').style.display = 'none'; });
+    $('#map-close').addEventListener('click', () => {
+      $('#map-window').style.display = 'none';
+      $('#map-regions').classList.remove('active');
+    });
     const mapCanvas = $('#map-canvas') as unknown as HTMLCanvasElement;
-    mapCanvas.addEventListener('wheel', (ev) => {
+    // wheel-zoom lives on the stage, not the canvas, so it still fires in the
+    // overview where the clickable region overlay sits on top of the canvas
+    $('#map-stage').addEventListener('wheel', (ev) => {
       ev.preventDefault();
       this.zoomMap((ev as WheelEvent).deltaY < 0 ? 1.2 : 1 / 1.2);
     }, { passive: false });
@@ -1787,6 +1792,10 @@ export class Hud {
             this.logZoneWelcome(currentZone);
           }
           this.lastZoneId = currentZone.id;
+          // a committed zone change releases any zone the user was browsing on
+          // the map, so the view resumes following the player (otherwise the
+          // map could freeze on the browsed zone with no "you are here")
+          this.mapViewZoneId = null;
         }
       }
 
@@ -2266,7 +2275,7 @@ export class Hud {
 
   toggleMap(): void {
     const el = $('#map-window');
-    if (el.style.display === 'block') { el.style.display = 'none'; return; }
+    if (el.style.display === 'block') { el.style.display = 'none'; $('#map-regions').classList.remove('active'); return; }
     this.closeOtherWindows('#map-window');
     this.mapZoom = 1; // always open at the full-zone view, following the player
     this.mapCenter = null;
