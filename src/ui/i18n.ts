@@ -2636,6 +2636,9 @@ const hudStringsEn = {
       zoomIn: "Zoom in",
       zoomOut: "Zoom out",
     },
+    map: {
+      zoneLevels: "Lv {min}–{max}",
+    },
     options: {
       gameMenu: "Game Menu",
       keyBindings: "Key Bindings",
@@ -2976,6 +2979,9 @@ const hudStrings = {
         zoomIn: "Acercar",
         zoomOut: "Alejar",
       },
+      map: {
+        zoneLevels: "Nv {min}–{max}",
+      },
       options: {
         gameMenu: "Menú del juego",
         keyBindings: "Atajos de teclado",
@@ -3096,6 +3102,9 @@ const hudStrings = {
         closeMap: "Fermer la carte",
         zoomIn: "Zoom avant",
         zoomOut: "Zoom arrière",
+      },
+      map: {
+        zoneLevels: "Niv. {min}–{max}",
       },
       options: {
         gameMenu: "Menu du jeu",
@@ -3219,6 +3228,9 @@ const hudStrings = {
         zoomIn: "Aumenta zoom",
         zoomOut: "Riduci zoom",
       },
+      map: {
+        zoneLevels: "Liv {min}–{max}",
+      },
       options: {
         gameMenu: "Menu di gioco",
         keyBindings: "Comandi da tastiera",
@@ -3338,6 +3350,9 @@ const hudStrings = {
         closeMap: "Karte schließen",
         zoomIn: "Heranzoomen",
         zoomOut: "Herauszoomen",
+      },
+      map: {
+        zoneLevels: "St. {min}–{max}",
       },
       options: {
         gameMenu: "Spielmenü",
@@ -3459,6 +3474,9 @@ const hudStrings = {
         zoomIn: "放大",
         zoomOut: "缩小",
       },
+      map: {
+        zoneLevels: "{min}–{max} 级",
+      },
       options: {
         gameMenu: "游戏菜单",
         keyBindings: "按键绑定",
@@ -3578,6 +3596,9 @@ const hudStrings = {
         closeMap: "關閉地圖",
         zoomIn: "放大",
         zoomOut: "縮小",
+      },
+      map: {
+        zoneLevels: "{min}–{max} 級",
       },
       options: {
         gameMenu: "遊戲選單",
@@ -3699,6 +3720,9 @@ const hudStrings = {
         zoomIn: "확대",
         zoomOut: "축소",
       },
+      map: {
+        zoneLevels: "{min}–{max}레벨",
+      },
       options: {
         gameMenu: "게임 메뉴",
         keyBindings: "키 설정",
@@ -3818,6 +3842,9 @@ const hudStrings = {
         closeMap: "マップを閉じる",
         zoomIn: "ズームイン",
         zoomOut: "ズームアウト",
+      },
+      map: {
+        zoneLevels: "レベル{min}–{max}",
       },
       options: {
         gameMenu: "ゲームメニュー",
@@ -3939,6 +3966,9 @@ const hudStrings = {
         zoomIn: "Aproximar",
         zoomOut: "Afastar",
       },
+      map: {
+        zoneLevels: "Nv {min}–{max}",
+      },
       options: {
         gameMenu: "Menu do jogo",
         keyBindings: "Atalhos de teclado",
@@ -4058,6 +4088,9 @@ const hudStrings = {
         closeMap: "Закрыть карту",
         zoomIn: "Приблизить",
         zoomOut: "Отдалить",
+      },
+      map: {
+        zoneLevels: "Ур. {min}–{max}",
       },
       options: {
         gameMenu: "Меню игры",

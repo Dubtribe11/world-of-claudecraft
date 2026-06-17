@@ -27,6 +27,7 @@ import { Keybinds, BIND_ACTIONS, BIND_CATEGORIES, isReservedCode, keyLabel } fro
 import { Settings, GameSettings, BoolSettingKey, NumericSettingKey, SETTING_RANGES, clickMoveButtonLabel, normalizeClickMoveButton } from '../game/settings';
 import { isPhoneTouchDevice } from '../game/mobile_controls';
 import { chatPlayerContextActions } from './player_context_menu';
+import { worldStripRect, zoneBandPct } from './world_map';
 import { TouchPeekGuard, TOOLTIP_PEEK_MS } from './touch_peek';
 import { maskProfanity } from './profanity';
 import { formatMoney as formatLocalizedMoney, formatNumber, moneyParts, t, type TranslationKey } from './i18n';
@@ -211,6 +212,7 @@ type HotbarForm = 'normal' | 'bear' | 'cat' | 'stealth';
 const MAP_BG_RES = 480;
 const MAP_MAX_ZOOM = 6;
 const MAP_DETAIL_ZOOM = 2.2; // at/above this zoom, overlay buildings + vegetation
+const WORLD_MAP_BG_W = 300; // whole-world overview terrain, pre-rendered once at this width
 
 export class Hud {
   private static readonly BAR_ABILITY_SLOTS = 11; // bar slots 1..11; slot 0 is the fixed Attack toggle
@@ -306,6 +308,10 @@ export class Hud {
   private mapDrag: { px: number; py: number; cx: number; cz: number } | null = null;
   private mapView: { spanX: number; spanZ: number; minX: number; maxX: number; minZ: number; maxZ: number } | null = null;
   private mapDecorations: Decoration[] | null = null; // cached trees/rocks (whole world)
+  private mapOverview = false; // map window showing the whole-world overview vs a single zone
+  private mapViewZoneId: string | null = null; // zone being browsed (null = follow the player's zone)
+  private worldMapBg: HTMLCanvasElement | null = null; // cached whole-world overview terrain
+  private mapRegionsBuilt = false; // clickable overview zone overlays created once
   private windowDrag: { el: HTMLElement; pointerId: number; offsetX: number; offsetY: number } | null = null;
   private windowObserver: MutationObserver | null = null;
   private windowZ = 50;
@@ -421,6 +427,12 @@ export class Hud {
     }, { passive: false });
     $('#map-zoom-in')?.addEventListener('click', () => this.zoomMap(1.4));
     $('#map-zoom-out')?.addEventListener('click', () => this.zoomMap(1 / 1.4));
+    // toggle between the whole-world overview and the single-zone view
+    $('#map-world')?.addEventListener('click', () => {
+      if (this.mapOverview) this.enterZoneView(this.mapViewZoneId ?? this.currentZoneId());
+      else this.enterWorldOverview();
+    });
+    this.buildMapRegions(); // clickable zone overlays for the overview (positions are static)
     // drag to pan (only meaningful while zoomed in; at zoom 1 the whole zone fits)
     mapCanvas.addEventListener('pointerdown', (ev) => {
       if (!this.mapView || this.mapZoom <= 1) return;
@@ -1091,6 +1103,8 @@ export class Hud {
   }
 
   private refreshLocalizedDynamicUi(): void {
+    this.refreshMapRegionLabels();
+    if ($('#map-window').style.display === 'block') this.updateMapWindow();
     this.updateQuestTracker();
     const log = $('#quest-log-window');
     if (log.style.display === 'block') this.renderQuestLog();
@@ -2256,35 +2270,125 @@ export class Hud {
     this.closeOtherWindows('#map-window');
     this.mapZoom = 1; // always open at the full-zone view, following the player
     this.mapCenter = null;
+    this.mapOverview = false; // ...not the whole-world overview
+    this.mapViewZoneId = null; // ...and following the player's zone, not a browsed one
+    $('#map-world')?.setAttribute('aria-pressed', 'false');
     el.style.display = 'block';
     this.updateMapWindow();
   }
 
-  // scroll-wheel / button zoom for the world map (clamped to [1, MAP_MAX_ZOOM])
+  // scroll-wheel / button zoom for the world map. Zooming out past the full
+  // single-zone view (zoom 1) opens the whole-world overview; zooming in from
+  // the overview drops back into a single zone.
   private zoomMap(factor: number): void {
+    if (this.mapOverview) {
+      if (factor > 1) this.enterZoneView(this.mapViewZoneId ?? this.currentZoneId());
+      return; // already fully zoomed out
+    }
+    if (factor < 1 && this.mapZoom <= 1) { this.enterWorldOverview(); return; }
     const prev = this.mapZoom;
     this.mapZoom = Math.max(1, Math.min(MAP_MAX_ZOOM, this.mapZoom * factor));
-    // zooming back to 1 resumes following the player; a fresh zoom-in from the
-    // follow view anchors the pan at the player so dragging starts from there
+    // zooming back to 1 resumes following the view focus; a fresh zoom-in from
+    // the follow view anchors the pan there so dragging starts from there
     if (this.mapZoom === 1) this.mapCenter = null;
-    else if (prev === 1 && !this.mapCenter) this.mapCenter = { x: this.sim.player.pos.x, z: this.sim.player.pos.z };
+    else if (prev === 1 && !this.mapCenter) this.mapCenter = this.mapFollowPos(this.viewedZone());
     if ($('#map-window').style.display === 'block') this.updateMapWindow();
   }
 
-  // The map window shows the zone band the player is standing in (each band
-  // is a square); POIs and dungeon portals come from the zone/dungeon data.
+  private currentZoneId(): string {
+    const p = this.sim.player;
+    const dungeon = dungeonAt(p.pos.x);
+    if (dungeon) return zoneAt(dungeon.doorPos.z).id;
+    return (ZONES.find((z) => z.id === this.lastZoneId) ?? zoneAt(p.pos.z)).id;
+  }
+
+  // The zone the single-zone view renders: the one the user picked while
+  // browsing the overview, else the dungeon's zone when inside an instance,
+  // else the committed zone the player stands in.
+  private viewedZone(): ZoneDef {
+    if (this.mapViewZoneId) {
+      const z = ZONES.find((zone) => zone.id === this.mapViewZoneId);
+      if (z) return z;
+    }
+    const p = this.sim.player;
+    const dungeon = dungeonAt(p.pos.x);
+    if (dungeon) return zoneAt(dungeon.doorPos.z);
+    return ZONES.find((z) => z.id === this.lastZoneId) ?? zoneAt(p.pos.z);
+  }
+
+  // Where the single-zone view recenters when it isn't panned: the player when
+  // they're standing in this zone, otherwise the zone's hub — so a browsed zone
+  // frames its town as you zoom in rather than snapping to a clamped corner.
+  private mapFollowPos(zone: ZoneDef): { x: number; z: number } {
+    const p = this.sim.player;
+    const inZone = dungeonAt(p.pos.x) === null && p.pos.z >= zone.zMin && p.pos.z < zone.zMax && p.pos.x <= WORLD_MAX_X;
+    return inZone ? { x: p.pos.x, z: p.pos.z } : { x: zone.hub.x, z: zone.hub.z };
+  }
+
+  private enterWorldOverview(): void {
+    this.mapOverview = true;
+    this.mapZoom = 1;
+    this.mapCenter = null;
+    this.mapDrag = null;
+    $('#map-world')?.setAttribute('aria-pressed', 'true');
+    if ($('#map-window').style.display === 'block') this.updateMapWindow();
+  }
+
+  private enterZoneView(zoneId: string): void {
+    this.mapOverview = false;
+    this.mapViewZoneId = zoneId;
+    this.mapZoom = 1;
+    this.mapCenter = null;
+    this.mapDrag = null;
+    $('#map-world')?.setAttribute('aria-pressed', 'false');
+    if ($('#map-window').style.display === 'block') this.updateMapWindow();
+  }
+
+  // The whole-world overview's clickable zone overlays: one transparent button
+  // per zone band, positioned by its share of the world's z-span. Real buttons
+  // give the overview keyboard focus, activation and screen-reader names for
+  // free; the canvas underneath just paints the picture.
+  private buildMapRegions(): void {
+    if (this.mapRegionsBuilt) return;
+    const host = document.getElementById('map-regions');
+    if (!host) return;
+    const world = { minX: WORLD_MIN_X, maxX: WORLD_MAX_X, minZ: WORLD_MIN_Z, maxZ: WORLD_MAX_Z };
+    host.innerHTML = '';
+    for (const zone of ZONES) {
+      const band = zoneBandPct(zone, world);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'map-region';
+      btn.style.top = `${band.top * 100}%`;
+      btn.style.height = `${band.height * 100}%`;
+      btn.setAttribute('aria-label', zoneDisplayName(zone.id));
+      btn.addEventListener('click', () => this.enterZoneView(zone.id));
+      host.appendChild(btn);
+    }
+    this.mapRegionsBuilt = true;
+  }
+
+  private refreshMapRegionLabels(): void {
+    const host = document.getElementById('map-regions');
+    if (!host) return;
+    const btns = host.querySelectorAll('button.map-region');
+    ZONES.forEach((zone, i) => btns[i]?.setAttribute('aria-label', zoneDisplayName(zone.id)));
+  }
+
+  // The map window shows either the whole-world overview (every zone band, each
+  // clickable to drill in) or a single zone band; POIs and dungeon portals come
+  // from the zone/dungeon data.
   private updateMapWindow(): void {
     const canvas = $('#map-canvas') as unknown as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
     const S = canvas.width;
     const p = this.sim.player;
-    // inside an instance, show the zone the dungeon's door is in (dungeonAt
-    // owns the instance x-band layout); outdoors, follow the committed zone
-    // so border-straddling can't thrash the 280px canvas regen below
-    const dungeon = dungeonAt(p.pos.x);
-    const zone: ZoneDef = dungeon
-      ? zoneAt(dungeon.doorPos.z)
-      : ZONES.find((z) => z.id === this.lastZoneId) ?? zoneAt(p.pos.z);
+    $('#map-regions').classList.toggle('active', this.mapOverview);
+    if (this.mapOverview) { this.drawWorldOverview(ctx, S); return; }
+    // single-zone view: the zone the user is browsing (picked in the overview),
+    // else the dungeon's zone when inside an instance, else the committed zone
+    // the player stands in (so border-straddling can't thrash the regen below)
+    const zone = this.viewedZone();
     const full = { minX: WORLD_MIN_X, maxX: WORLD_MAX_X, minZ: zone.zMin, maxZ: zone.zMax };
     if (!this.mapBg || this.mapZoneId !== zone.id) {
       this.mapBg = this.renderTerrainCanvas(MAP_BG_RES, full); // whole zone, cached & detailed
@@ -2296,9 +2400,10 @@ export class Hud {
     const fullSpanZ = full.maxZ - full.minZ;
     const spanX = fullSpanX / this.mapZoom;
     const spanZ = fullSpanZ / this.mapZoom;
-    // centre on the pan target if the user dragged, else follow the player
-    const baseX = this.mapCenter ? this.mapCenter.x : p.pos.x;
-    const baseZ = this.mapCenter ? this.mapCenter.z : p.pos.z;
+    // centre on the pan target if the user dragged, else follow the view focus
+    const follow = this.mapFollowPos(zone);
+    const baseX = this.mapCenter ? this.mapCenter.x : follow.x;
+    const baseZ = this.mapCenter ? this.mapCenter.z : follow.z;
     const cx = Math.max(full.minX + spanX / 2, Math.min(full.maxX - spanX / 2, baseX));
     const cz = Math.max(full.minZ + spanZ / 2, Math.min(full.maxZ - spanZ / 2, baseZ));
     const region = { minX: cx - spanX / 2, maxX: cx + spanX / 2, minZ: cz - spanZ / 2, maxZ: cz + spanZ / 2 };
@@ -2410,6 +2515,101 @@ export class Hud {
       };
       for (const f of social.friends) plotAlly(f, '#4ade80'); // friends green (win ties)
       if (social.guild) for (const m of social.guild.members) plotAlly(m, '#60a5fa');
+    }
+  }
+
+  // The whole-world overview: every zone band stacked north→south as an
+  // aspect-preserved "continent" strip, each labelled with its name and level
+  // range, the player's zone highlighted, dungeon portals and online allies
+  // plotted, plus a "you are here" marker. The clickable zone overlays
+  // (#map-regions) sit on top for interaction; this just paints the picture.
+  private drawWorldOverview(ctx: CanvasRenderingContext2D, S: number): void {
+    const world = { minX: WORLD_MIN_X, maxX: WORLD_MAX_X, minZ: WORLD_MIN_Z, maxZ: WORLD_MAX_Z };
+    const p = this.sim.player;
+    if (!this.worldMapBg) this.worldMapBg = this.renderTerrainCanvas(WORLD_MAP_BG_W, world); // cached once
+    ctx.fillStyle = '#0c0a06'; // fills the horizontal letterbox beside the strip
+    ctx.fillRect(0, 0, S, S);
+    const strip = worldStripRect(S, world);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(this.worldMapBg, strip.x, strip.y, strip.w, strip.h);
+    const spanX = world.maxX - world.minX;
+    const spanZ = world.maxZ - world.minZ;
+    const toMap = (x: number, z: number) => ({
+      mx: strip.x + ((world.maxX - x) / spanX) * strip.w, // +X is map-left (east = -X)
+      my: strip.y + ((world.maxZ - z) / spanZ) * strip.h, // +Z up (north at the top)
+    });
+    const currentId = this.currentZoneId();
+    // zone bands: highlight the player's zone, draw dividers + name/level labels
+    ctx.textAlign = 'center';
+    for (const zone of ZONES) {
+      const top = toMap(0, zone.zMax).my;
+      const bot = toMap(0, zone.zMin).my;
+      if (zone.id === currentId) {
+        ctx.fillStyle = '#ffd1001f';
+        ctx.fillRect(strip.x, top, strip.w, bot - top);
+        ctx.strokeStyle = '#ffd100aa';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(strip.x + 1, top + 1, strip.w - 2, bot - top - 2);
+      }
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(strip.x, top); ctx.lineTo(strip.x + strip.w, top); ctx.stroke();
+      const cy = (top + bot) / 2;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#000';
+      ctx.fillStyle = '#ffe9a0';
+      ctx.font = 'bold 15px Georgia';
+      const name = zoneDisplayName(zone.id);
+      ctx.strokeText(name, S / 2, cy - 3); ctx.fillText(name, S / 2, cy - 3);
+      ctx.font = 'bold 12px Georgia';
+      ctx.fillStyle = '#cfe0a0';
+      const levels = t('hud.map.zoneLevels', {
+        min: formatNumber(zone.levelRange[0], { maximumFractionDigits: 0 }),
+        max: formatNumber(zone.levelRange[1], { maximumFractionDigits: 0 }),
+      });
+      ctx.strokeText(levels, S / 2, cy + 14); ctx.fillText(levels, S / 2, cy + 14);
+    }
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(strip.x, strip.y, strip.w, strip.h); // frame the strip
+    // dungeon entrance portals
+    for (const dungeon of DUNGEON_LIST) {
+      const { mx, my } = toMap(dungeon.doorPos.x, dungeon.doorPos.z);
+      ctx.fillStyle = '#c084ff';
+      ctx.strokeStyle = '#000';
+      ctx.beginPath(); ctx.arc(mx, my, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+    // online friends (green) / guild (blue) as dots
+    const social = this.sim.socialInfo;
+    if (social) {
+      const drawn = new Set<number>();
+      const dot = (m: FriendInfo, color: string) => {
+        if (!m.online || m.x === undefined || m.z === undefined || m.name === p.name || drawn.has(m.id)) return;
+        drawn.add(m.id);
+        const { mx, my } = toMap(m.x, m.z);
+        ctx.fillStyle = color;
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(mx, my, 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      };
+      for (const f of social.friends) dot(f, '#4ade80');
+      if (social.guild) for (const m of social.guild.members) dot(m, '#60a5fa');
+    }
+    // "you are here": the player marker, when outdoors within the world bounds
+    if (dungeonAt(p.pos.x) === null && p.pos.x <= WORLD_MAX_X && p.pos.z >= WORLD_MIN_Z && p.pos.z < WORLD_MAX_Z) {
+      const { mx, my } = toMap(p.pos.x, p.pos.z);
+      ctx.save();
+      ctx.translate(mx, my);
+      ctx.rotate(-p.facing); // matches the flipped map (see toMap)
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -7); ctx.lineTo(5, 6); ctx.lineTo(-5, 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
     }
   }
 

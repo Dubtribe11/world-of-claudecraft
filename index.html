@@ -1023,6 +1023,11 @@
     background: radial-gradient(circle at 35% 30%, #2c2c3a, #15151f);
     box-shadow: inset 0 1px 0 #ffffff18, 0 2px 4px #0009; display: flex; align-items: center; justify-content: center; }
   .map-zoom-btn:hover { border-color: var(--gold); color: #fff; }
+  .map-zoom-btn .ui-icon { width: 18px; height: 18px; }
+  /* World-overview toggle, lit while the whole-world view is showing */
+  .map-zoom-btn[aria-pressed="true"] { border-color: var(--gold); color: #fff;
+    background: radial-gradient(circle at 35% 30%, #4a3a1a, #2a2008);
+    box-shadow: inset 0 0 8px #ffd10055, 0 2px 4px #0009; }
   #map-close {
     position: absolute;
     right: 8px;
@@ -1123,7 +1128,14 @@
   .mkt-list-btn:disabled { opacity: 0.5; cursor: default; filter: none; }
   .mkt-collect { display: flex; align-items: center; justify-content: space-between; gap: 10px;
     padding: 8px; background: #ffffff0a; border-radius: 6px; margin-bottom: 8px; }
-  #map-canvas { border: 2px solid var(--border); outline: 1px solid #000; border-radius: 4px; touch-action: none; }
+  #map-stage { position: relative; width: 560px; max-width: 100%; margin: 0 auto; line-height: 0; }
+  #map-canvas { display: block; width: 100%; height: auto; border: 2px solid var(--border); outline: 1px solid #000; border-radius: 4px; touch-action: none; }
+  /* clickable zone regions overlaid on the whole-world overview (hidden in the single-zone view) */
+  #map-regions { position: absolute; inset: 0; display: none; }
+  #map-regions.active { display: block; }
+  .map-region { position: absolute; left: 0; width: 100%; margin: 0; padding: 0; border: 0; background: transparent; cursor: pointer; border-radius: 3px; }
+  .map-region:hover { background: #ffd1001a; }
+  .map-region:focus-visible { outline: 3px solid var(--gold); outline-offset: -3px; background: #ffd1001a; }
 
   /* ---------- options / game menu (Esc) ---------- */
   #options-menu { width: 420px; z-index: 40; }
@@ -5393,10 +5405,14 @@
     <div id="map-window" class="window panel">
       <button class="x-btn" id="map-close" data-i18n-title="hud.core.closeMap" data-i18n-aria="hud.core.closeMap" title="Close map" aria-label="Close map" data-icon="close"></button>
       <div id="map-zoom">
+        <button class="map-zoom-btn" id="map-world" data-i18n-title="controls.worldMap" data-i18n-aria="controls.worldMap" title="World Map" aria-label="World Map" aria-pressed="false" data-icon="map"></button>
         <button class="map-zoom-btn" id="map-zoom-in" data-i18n-title="hud.core.zoomIn" data-i18n-aria="hud.core.zoomIn" title="Zoom in" aria-label="Zoom in">+</button>
         <button class="map-zoom-btn" id="map-zoom-out" data-i18n-title="hud.core.zoomOut" data-i18n-aria="hud.core.zoomOut" title="Zoom out" aria-label="Zoom out">&minus;</button>
       </div>
-      <canvas id="map-canvas" width="560" height="560"></canvas>
+      <div id="map-stage">
+        <canvas id="map-canvas" width="560" height="560"></canvas>
+        <div id="map-regions"></div>
+      </div>
     </div>
     <div id="arena-window" class="window panel"></div>
     <div id="leaderboard-window" class="window panel"></div>
