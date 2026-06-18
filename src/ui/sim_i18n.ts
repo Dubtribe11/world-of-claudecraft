@@ -1746,6 +1746,34 @@ function tArenaExtra(key: ArenaExtraKey, params?: InterpolationValues): string {
   return interpolate(table[key] ?? ARENA_EXTRA.en[key], params);
 }
 
+// Ravenrift 5v5 capture-the-flag emit strings. English is authoritative; other
+// locales fall back to English here and are filled from the registry at release
+// (the PR-tier S3 guard only requires recognition, not translation).
+type BgExtraKey =
+  | 'joinQueue' | 'leaveQueue' | 'partyJoinQueue' | 'battleBegins' | 'fightFor' | 'seizeRune'
+  | 'errInBattleground' | 'errQueueDead' | 'errMemberQueued';
+
+const BG_EXTRA_EN: Record<BgExtraKey, string> = {
+  joinQueue: 'You join the Ravenrift queue. Need 10 champions to start a match…',
+  leaveQueue: 'You leave the Ravenrift queue.',
+  partyJoinQueue: 'Your party of {count} joins the Ravenrift queue.',
+  battleBegins: 'The Ravenrift battle begins — take their flag!',
+  fightFor: 'Ravenrift: you fight for the {team}. First to {caps} captures wins.',
+  seizeRune: 'You seize a Sprint Rune!',
+  errInBattleground: 'You are already in a battleground.',
+  errQueueDead: 'You cannot queue for Ravenrift while dead.',
+  errMemberQueued: 'A party member is already queued or in a match.',
+};
+
+const BG_EXTRA: Partial<Record<SupportedLanguage, Partial<Record<BgExtraKey, string>>>> = {
+  en: BG_EXTRA_EN,
+};
+
+function tBg(key: BgExtraKey, params?: InterpolationValues): string {
+  const table = BG_EXTRA[getLanguage()] ?? {};
+  return interpolate(table[key] ?? BG_EXTRA_EN[key], params);
+}
+
 // EXACT (no-placeholder) sim messages: English -> key (auto-built; throws on collision).
 const EXACT: Record<string, SimMessageKey> = {};
 for (const key of Object.keys(enTable) as SimMessageKey[]) {
@@ -1800,6 +1828,16 @@ const RULES: Rule[] = [
   { re: /^(.+) cannot queue while dueling\.$/, build: (m) => tArenaExtra('memberDueling', { name: m[1] }) },
   { re: /^(.+) must finish trading before queueing\.$/, build: (m) => tArenaExtra('memberTrading', { name: m[1] }) },
   { re: /^(.+) cannot queue from inside an instance\.$/, build: (m) => tArenaExtra('memberInstance', { name: m[1] }) },
+  // Ravenrift 5v5 capture-the-flag
+  { re: /^You join the Ravenrift queue\. Need 10 champions to start a match[.…]{1,3}$/, build: () => tBg('joinQueue') },
+  { re: /^You leave the Ravenrift queue\.$/, build: () => tBg('leaveQueue') },
+  { re: /^Your party of (.+?) joins the Ravenrift queue\.$/, build: (m) => tBg('partyJoinQueue', { count: m[1] }) },
+  { re: /^The Ravenrift battle begins — take their flag!$/, build: () => tBg('battleBegins') },
+  { re: /^Ravenrift: you fight for the (.+?)\. First to (.+?) captures wins\.$/, build: (m) => tBg('fightFor', { team: m[1], caps: m[2] }) },
+  { re: /^You seize a Sprint Rune!$/, build: () => tBg('seizeRune') },
+  { re: /^You are already in a battleground\.$/, build: () => tBg('errInBattleground') },
+  { re: /^You cannot queue for Ravenrift while dead\.$/, build: () => tBg('errQueueDead') },
+  { re: /^A party member is already queued or in a match\.$/, build: () => tBg('errMemberQueued') },
 ];
 
 // Returns the localized form of a sim-emitted message, or null if not one of ours.

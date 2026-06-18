@@ -1048,6 +1048,10 @@ export class GameServer {
         break;
       }
       case 'arena_leave': sim.arenaQueueLeave(pid); break;
+      // Ravenrift (5v5 capture-the-flag) queue
+      case 'bg_queue': sim.bgQueueJoin(pid); break;
+      case 'bg_leave': sim.bgQueueLeave(pid); break;
+      case 'dev_bg_start': if (process.env.ALLOW_DEV_COMMANDS === '1') sim.devStartBg(); break;
 
       // post-cap cosmetic prestige (Max-Level XP Overflow)
       case 'prestige': sim.prestige(pid); break;
@@ -1303,6 +1307,7 @@ export class GameServer {
     maybe('trade', this.tradeWire(session.pid));
     maybe('duel', this.duelWire(session.pid));
     maybe('arena', this.sim.arenaInfoFor(session.pid));
+    maybe('bg', this.sim.bgInfoFor(session.pid));
     // market info is null unless the player is standing at the Merchant, so it
     // only rides the wire for players actually browsing the World Market
     maybe('market', this.sim.marketInfoFor(session.pid));

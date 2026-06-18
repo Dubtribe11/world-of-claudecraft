@@ -663,6 +663,15 @@ export type SimEvent = { pid?: number } & (
   | { type: 'arenaCountdown'; seconds: number }
   | { type: 'arenaStart' }
   | { type: 'arenaEnd'; format: ArenaFormat; won: boolean; draw: boolean; oppName: string; ratingBefore: number; ratingAfter: number; allies: ArenaCombatant[]; enemies: ArenaCombatant[] }
+  // Ravenrift 5v5 capture-the-flag: queue state, match lifecycle, flag plays,
+  // and the squad-rating result. Personal (carry a `pid`).
+  | { type: 'bgQueued'; position: number }
+  | { type: 'bgUnqueued' }
+  | { type: 'bgFound'; team: number }
+  | { type: 'bgCountdown'; seconds: number }
+  | { type: 'bgStart' }
+  | { type: 'bgFlag'; action: 'taken' | 'dropped' | 'returned' | 'captured'; team: number; byName: string; scoreCrimson: number; scoreAzure: number }
+  | { type: 'bgEnd'; won: boolean; draw: boolean; scoreCrimson: number; scoreAzure: number; ratingBefore: number; ratingAfter: number }
   | { type: 'heal2'; sourceId: number; targetId: number; amount: number; crit: boolean; ability: string }
   // visual-only cue for the renderer: spell projectiles, dot ticks, aoe novas
   | { type: 'spellfx'; sourceId: number; targetId: number; school: string; fx: 'projectile' | 'tick' | 'nova' }

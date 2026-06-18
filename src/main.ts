@@ -608,6 +608,7 @@ async function startGame(world: IWorld, offlineSim: Sim | null, online: ClientWo
         case 'meters': hud.toggleMeters(); break;
         case 'social': hud.toggleSocial(); break;
         case 'arena': hud.toggleArena(); break;
+        case 'battleground': hud.toggleBg(); break;
         case 'leaderboard': hud.toggleLeaderboard(); break;
         case 'chat': openChat(); break;
         case 'escape':

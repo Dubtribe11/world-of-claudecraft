@@ -20,7 +20,7 @@ export type UiIconName =
   | 'chat' | 'interact' | 'emote'
   // hand-authored geometrics
   | 'close' | 'prev' | 'next' | 'more' | 'meters'
-  | 'whisper' | 'music' | 'talents' | 'skull' | 'jump' | 'autorun' | 'nameplates' | 'vibrate';
+  | 'whisper' | 'music' | 'talents' | 'skull' | 'jump' | 'autorun' | 'nameplates' | 'vibrate' | 'battleground';
 
 // Inner SVG markup per icon (one or more <path>). Default fill rule is nonzero
 // (correct for game-icons.net art incl. overlaps); the two hand-authored cut-out
@@ -60,6 +60,8 @@ const ICONS: Record<UiIconName, string> = {
   autorun: '<path d="M136 264 256 152 376 264M136 392 256 280 376 392" stroke="currentColor" stroke-width="34" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   // phone handset flanked by vibration waves (hand-authored to match the bar glyphs)
   vibrate: '<path fill-rule="evenodd" d="M196 80h120a24 24 0 0 1 24 24v304a24 24 0 0 1-24 24H196a24 24 0 0 1-24-24V104a24 24 0 0 1 24-24zm4 40v272h112V120H200z"/><path d="M96 176v160h28V176zM388 176v160h28V176zM40 216v80h26v-80zM446 216v80h26v-80z"/>',
+  // hand-authored capture-the-flag banner on a pole (Ravenrift battleground)
+  battleground: '<path d="M150 56h26v400h-26z"/><path d="M176 78h236l-52 66 52 66H176z"/>',
 };
 
 export function hasUiIcon(name: string): name is UiIconName {

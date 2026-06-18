@@ -503,6 +503,41 @@ export async function topArenaRatings(limit = 20): Promise<ArenaLeaderRow[]> {
 }
 
 // ---------------------------------------------------------------------------
+// Ravenrift 5v5 squad ladder. Ratings/records live inside each character's
+// state JSONB (no schema migration); only characters who have played a match
+// appear. Realm-scoped; read through the server-side cache in main.ts.
+// ---------------------------------------------------------------------------
+
+export interface SquadLeaderRow {
+  name: string;
+  class: PlayerClass;
+  level: number;
+  rating: number;
+  wins: number;
+  losses: number;
+}
+
+export async function topSquadRatings(limit = 20): Promise<SquadLeaderRow[]> {
+  const res = await pool.query(
+    `SELECT name, class, level,
+            COALESCE((state->>'squadRating')::int, 1500) AS rating,
+            COALESCE((state->>'squadWins')::int, 0)     AS wins,
+            COALESCE((state->>'squadLosses')::int, 0)   AS losses
+       FROM characters
+      WHERE realm = $1
+        AND state IS NOT NULL
+        AND COALESCE((state->>'squadWins')::int, 0) + COALESCE((state->>'squadLosses')::int, 0) > 0
+      ORDER BY rating DESC, wins DESC, name ASC
+      LIMIT $2`,
+    [REALM, Math.max(1, Math.min(100, limit))],
+  );
+  return res.rows.map((r) => ({
+    name: r.name, class: r.class, level: r.level,
+    rating: Number(r.rating), wins: Number(r.wins), losses: Number(r.losses),
+  }));
+}
+
+// ---------------------------------------------------------------------------
 // Lifetime-XP leaderboard (Max-Level XP Overflow). Ranks characters by the
 // `lifetimeXp` stored in their state JSONB. Realm-scoped (FR-4.3) and backed by
 // the `characters_lifetime_xp` index. Read through the server-side cache in

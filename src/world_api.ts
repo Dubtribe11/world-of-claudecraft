@@ -155,6 +155,58 @@ export interface ArenaInfo {
 }
 
 // ---------------------------------------------------------------------------
+// Ravenrift — the ranked 5v5 capture-the-flag battleground. A separate squad
+// ladder from the arena; the HUD reads `bgInfo` and sends queue commands.
+// ---------------------------------------------------------------------------
+
+export interface SquadLadderEntry {
+  pid: number;
+  name: string;
+  cls: PlayerClass;
+  rating: number;
+  wins: number;
+  losses: number;
+}
+
+export interface BgFlagInfo {
+  state: 'home' | 'carried' | 'dropped';
+  carrierName: string | null;
+  carrierTeam: number | null;
+}
+
+export interface BgPlayerInfo {
+  pid: number;
+  name: string;
+  cls: PlayerClass;
+  team: number; // 0 = Crimson, 1 = Azure
+  carrying: boolean;
+  dead: boolean;
+  hp: number;
+  mhp: number;
+}
+
+export interface BgMatchInfo {
+  state: 'countdown' | 'active';
+  myTeam: number;
+  capsToWin: number;
+  scores: [number, number]; // [Crimson, Azure]
+  flags: [BgFlagInfo, BgFlagInfo]; // indexed by home team
+  players: BgPlayerInfo[];
+  respawnIn: number; // whole seconds until your keep respawn (0 = alive)
+}
+
+export interface BgInfo {
+  rating: number;
+  wins: number;
+  losses: number;
+  queued: boolean;
+  queueSize: number; // champions waiting across all groups
+  queuedParty: number; // size of your own queued group
+  match: BgMatchInfo | null;
+  ladder: SquadLadderEntry[];
+}
+
+// ---------------------------------------------------------------------------
 // The World Market (the Merchant's auction house). Listings are global and
 // shared by every player; collections are the per-player gold + items waiting
 // to be picked up (sale proceeds, expired/returned listings).
@@ -239,6 +291,7 @@ export interface IWorld {
   tradeInfo: TradeInfo | null;
   duelInfo: DuelInfo | null;
   arenaInfo: ArenaInfo | null;
+  bgInfo: BgInfo | null;
   marketInfo: MarketInfo | null;
   partyInvite(targetPid: number): void;
   partyAccept(): void;
@@ -279,6 +332,9 @@ export interface IWorld {
   searchCharacters(query: string): Promise<CharacterSearchResult[]>;
   arenaQueueJoin(format?: ArenaFormat): void;
   arenaQueueLeave(): void;
+  // Ravenrift 5v5 capture-the-flag
+  bgQueueJoin(): void;
+  bgQueueLeave(): void;
   // World Market
   marketList(itemId: string, count: number, price: number): void;
   marketBuy(listingId: number): void;

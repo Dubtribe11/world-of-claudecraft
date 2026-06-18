@@ -175,7 +175,8 @@ describe('persistence', () => {
     expect(kb.actionForCode('KeyH')).toBe('targetFriendly');
     expect(kb.actionForCode('Enter')).toBe('chat');
     expect(kb.actionForCode('Equal')).toBe('slot11');
-    expect(kb.actionForCode('KeyY')).toBe(null);
+    expect(kb.actionForCode('KeyY')).toBe('battleground'); // a newer action keeps its default
+    expect(kb.actionForCode('KeyZ')).toBe(null); // a key no action claims stays unbound
   });
 
   it('drops a retained default that a stored binding already claimed', () => {

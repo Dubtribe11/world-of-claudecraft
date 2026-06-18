@@ -1,8 +1,9 @@
 import { generateDecorations, groundHeight } from './world';
 import {
-  DUNGEON_X_THRESHOLD, INSTANCE_SLOT_COUNT, PROPS, arenaOriginAt, dungeonAt, instanceOrigin, isArenaPos,
+  DUNGEON_X_THRESHOLD, INSTANCE_SLOT_COUNT, PROPS, arenaOriginAt, bgOriginAt, dungeonAt, instanceOrigin, isArenaPos, isBgPos,
 } from './data';
 import { ARENA_LAYOUT, CRYPT_LAYOUT, SANCTUM_LAYOUT, TEMPLE_LAYOUT, layoutColliders } from './dungeon_layout';
+import { battlegroundColliders } from './battleground_layout';
 
 // Static world collision. Prop placement comes from the per-zone content
 // modules (merged into PROPS by sim/data.ts): the renderer builds its meshes
@@ -113,6 +114,7 @@ const CRYPT_COLLIDERS: Collider[] = layoutColliders(CRYPT_LAYOUT);
 const SANCTUM_COLLIDERS: Collider[] = layoutColliders(SANCTUM_LAYOUT);
 const TEMPLE_COLLIDERS: Collider[] = layoutColliders(TEMPLE_LAYOUT);
 const ARENA_COLLIDERS: Collider[] = layoutColliders(ARENA_LAYOUT);
+const BG_COLLIDERS: Collider[] = battlegroundColliders();
 
 // Interior collider sets keyed by DungeonDef.interior.
 const INTERIOR_COLLIDERS: Record<string, Collider[]> = {
@@ -223,6 +225,11 @@ function instanceLocal(x: number, z: number): { ox: number; oz: number; interior
 // Resolve a movement destination against all static geometry. Movers slide
 // along obstacles. `r` is the body radius.
 export function resolvePosition(seed: number, x: number, z: number, r = 0.5): { x: number; z: number } {
+  if (isBgPos(x)) {
+    const o = bgOriginAt(z);
+    const local = resolveAgainst(BG_COLLIDERS, x - o.x, z - o.z, r);
+    return { x: local.x + o.x, z: local.z + o.z };
+  }
   if (isArenaPos(x)) {
     const o = arenaOriginAt(z);
     const local = resolveAgainst(ARENA_COLLIDERS, x - o.x, z - o.z, r);
@@ -333,6 +340,10 @@ export function cameraOcclusion(
   bx: number, by: number, bz: number,
   pad = 0.35,
 ): number {
+  if (isBgPos(ax)) {
+    const o = bgOriginAt(az);
+    return sweepColliders(BG_COLLIDERS, ax - o.x, ay, az - o.z, bx - o.x, by, bz - o.z, pad, true);
+  }
   if (isArenaPos(ax)) {
     const o = arenaOriginAt(az);
     return sweepColliders(ARENA_COLLIDERS, ax - o.x, ay, az - o.z, bx - o.x, by, bz - o.z, pad, true);
