@@ -18,9 +18,16 @@ import {
   type ArenaSeasonAward,
   type ArenaSeasonSettlerDeps,
   createArenaSeasonSettler,
+  oldestUnsettledArenaSeason,
   pickArenaSeasonChampions,
 } from '../../server/arena_season_settlement';
-import { arenaSeasonEndMs, arenaSeasonStartMs } from '../../src/sim/arena_season';
+import {
+  ARENA_PRESEASON,
+  ARENA_SEASON_EPOCH_MS,
+  arenaSeasonEndMs,
+  arenaSeasonIndexAt,
+  arenaSeasonStartMs,
+} from '../../src/sim/arena_season';
 
 const REALM = 'testrealm';
 const DAY = 86_400_000;
@@ -174,6 +181,49 @@ describe('pickArenaSeasonChampions', () => {
   });
 });
 
+describe('oldestUnsettledArenaSeason (the retention floor)', () => {
+  // The bug this exists to prevent: prune with a LIVE-season floor and the rows
+  // of a just-closed, not-yet-settled season are eligible the instant the
+  // boundary passes. That season then settles with zero champions and stamps
+  // its exactly-once marker, so the title is gone permanently and silently.
+  it('never floors at the live season while a closed one is unsettled', () => {
+    const justAfterSeason1Closed = arenaSeasonEndMs(1) + 60_000;
+    const live = arenaSeasonIndexAt(justAfterSeason1Closed);
+    expect(live).toBe(2);
+    // Season 1 has closed and nothing has settled it yet: it must be KEPT, so
+    // the floor is 1 and `season < 1` deletes nothing.
+    expect(oldestUnsettledArenaSeason(justAfterSeason1Closed, new Set())).toBe(1);
+    expect(oldestUnsettledArenaSeason(justAfterSeason1Closed, new Set())).toBeLessThan(live);
+  });
+
+  it('releases a season only once it is settled', () => {
+    const inSeason3 = arenaSeasonStartMs(3) + DAY;
+    // 1 settled, 2 still outstanding: the floor holds at 2, so season 1's rows
+    // are prunable and season 2's are not.
+    expect(oldestUnsettledArenaSeason(inSeason3, new Set([1]))).toBe(2);
+    // Both settled: only the live season is still being written to.
+    expect(oldestUnsettledArenaSeason(inSeason3, new Set([1, 2]))).toBe(3);
+  });
+
+  it('holds at the OLDEST outstanding season across a multi-season catch-up', () => {
+    // The catch-up path the design supports: a realm down across boundaries
+    // wakes with several seasons unsettled. Flooring at anything newer than the
+    // oldest would delete rows a pending settlement still has to rank over.
+    const inSeason5 = arenaSeasonStartMs(5) + DAY;
+    expect(oldestUnsettledArenaSeason(inSeason5, new Set([1, 3]))).toBe(2);
+    expect(oldestUnsettledArenaSeason(inSeason5, new Set([2, 3, 4]))).toBe(1);
+  });
+
+  it('floors at the live season in Preseason and once everything has settled', () => {
+    // Before the calendar opens nothing has closed, so there is nothing to keep.
+    expect(oldestUnsettledArenaSeason(ARENA_SEASON_EPOCH_MS - DAY, new Set())).toBe(
+      ARENA_PRESEASON,
+    );
+    const inSeason2 = arenaSeasonStartMs(2) + DAY;
+    expect(oldestUnsettledArenaSeason(inSeason2, new Set([1]))).toBe(2);
+  });
+});
+
 /** A settler over a fake clock and in-memory ledgers. */
 function makeSettler(over: Partial<ArenaSeasonSettlerDeps> = {}) {
   const settled = new Set<number>();
@@ -308,6 +358,13 @@ describe('the settlement driver', () => {
     expect(committed).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     expect(rig.settled.has(11)).toBe(false);
     expect(rig.info.join('\n')).toContain('no authored title');
+    // Reported ONCE per process, not once per five-minute poll forever: the skip
+    // is permanent once the calendar outruns the roster.
+    const unauthoredLines = () => rig.info.filter((l) => l.includes('no authored title')).length;
+    expect(unauthoredLines()).toBe(1);
+    await rig.settler.runOnce();
+    await rig.settler.runOnce();
+    expect(unauthoredLines()).toBe(1);
   });
 
   it('reports a read failure without wedging the next run', async () => {

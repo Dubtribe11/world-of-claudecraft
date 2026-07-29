@@ -1190,12 +1190,42 @@ export const zh_CN: EnTranslations = {
       "heading": "竞技场 第 {season} 赛季",
       "preseasonHeading": "竞技场 季前赛",
       "titleReward": "赛季头衔：{title}",
-      "endsInDays": "{count} 天后结束",
-      "endsInHours": "{count} 小时后结束",
-      "endsInMinutes": "{count} 分钟后结束",
-      "opensInDays": "{count} 天后开启",
-      "opensInHours": "{count} 小时后开启",
-      "opensInMinutes": "{count} 分钟后开启",
+      "endsInDays": {
+        "one": "{count} 天后结束",
+        "few": "{count} 天后结束",
+        "many": "{count} 天后结束",
+        "other": "{count} 天后结束"
+      },
+      "endsInHours": {
+        "one": "{count} 小时后结束",
+        "few": "{count} 小时后结束",
+        "many": "{count} 小时后结束",
+        "other": "{count} 小时后结束"
+      },
+      "endsInMinutes": {
+        "one": "{count} 分钟后结束",
+        "few": "{count} 分钟后结束",
+        "many": "{count} 分钟后结束",
+        "other": "{count} 分钟后结束"
+      },
+      "opensInDays": {
+        "one": "{count} 天后开启",
+        "few": "{count} 天后开启",
+        "many": "{count} 天后开启",
+        "other": "{count} 天后开启"
+      },
+      "opensInHours": {
+        "one": "{count} 小时后开启",
+        "few": "{count} 小时后开启",
+        "many": "{count} 小时后开启",
+        "other": "{count} 小时后开启"
+      },
+      "opensInMinutes": {
+        "one": "{count} 分钟后开启",
+        "few": "{count} 分钟后开启",
+        "many": "{count} 分钟后开启",
+        "other": "{count} 分钟后开启"
+      },
       "progressLabel": "赛季进度",
       "champions": "冠军",
       "seasonLabel": "第 {season} 赛季",

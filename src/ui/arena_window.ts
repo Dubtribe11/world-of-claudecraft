@@ -43,7 +43,7 @@ import { deedTitleText } from './deed_i18n';
 import { markDialogRoot } from './dialog_root';
 import { classDisplayName } from './entity_i18n';
 import { esc } from './esc';
-import { formatNumber, t } from './i18n';
+import { formatNumber, t, tPlural } from './i18n';
 import { svgIcon } from './ui_icons';
 
 // Best-effort all-time ladder pull is throttled per bracket to this interval.
@@ -58,19 +58,21 @@ const SEASON_REFETCH_MS = 300000;
 // server comes back, without letting open/close/open spam an unreachable one.
 const SEASON_RETRY_MS = LEADERBOARD_REFETCH_MS;
 
-// The countdown units the pure core quantizes to, mapped to their key pair. A
-// third unit reds tsc here instead of silently rendering nothing.
-const SEASON_COUNTDOWN_KEY: Record<
-  ArenaSeasonCountdown['unit'],
-  { ends: Parameters<typeof t>[0]; opens: Parameters<typeof t>[0] }
-> = {
-  days: { ends: 'hudChrome.arenaSeason.endsInDays', opens: 'hudChrome.arenaSeason.opensInDays' },
-  hours: { ends: 'hudChrome.arenaSeason.endsInHours', opens: 'hudChrome.arenaSeason.opensInHours' },
-  minutes: {
-    ends: 'hudChrome.arenaSeason.endsInMinutes',
-    opens: 'hudChrome.arenaSeason.opensInMinutes',
-  },
-};
+// The countdown units the pure core quantizes to, mapped to their tPlural BASE
+// key (tPlural appends the CLDR category). A third unit reds tsc here instead of
+// silently rendering nothing.
+const SEASON_COUNTDOWN_KEY: Record<ArenaSeasonCountdown['unit'], { ends: string; opens: string }> =
+  {
+    days: { ends: 'hudChrome.arenaSeason.endsInDays', opens: 'hudChrome.arenaSeason.opensInDays' },
+    hours: {
+      ends: 'hudChrome.arenaSeason.endsInHours',
+      opens: 'hudChrome.arenaSeason.opensInHours',
+    },
+    minutes: {
+      ends: 'hudChrome.arenaSeason.endsInMinutes',
+      opens: 'hudChrome.arenaSeason.opensInMinutes',
+    },
+  };
 
 // Class ids the painter can localize; passed to the pure core so it stays free
 // of the i18n layer while still flagging which rows resolve.
@@ -347,7 +349,9 @@ export class ArenaWindow {
           season: formatNumber(season.season, { maximumFractionDigits: 0 }),
         });
     const keys = SEASON_COUNTDOWN_KEY[season.countdown.unit];
-    const countdown = t(preseason ? keys.opens : keys.ends, {
+    // tPlural selects the CLDR category from the RAW count, then interpolates the
+    // locale-formatted number over it: "Ends in 1 day" but "Ends in 165 days".
+    const countdown = tPlural(preseason ? keys.opens : keys.ends, season.countdown.value, {
       count: formatNumber(season.countdown.value, { maximumFractionDigits: 0 }),
     });
     // Absent only once the calendar outruns the authored roster, which is the

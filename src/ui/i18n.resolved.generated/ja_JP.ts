@@ -1190,12 +1190,42 @@ export const ja_JP: EnTranslations = {
       "heading": "アリーナ シーズン{season}",
       "preseasonHeading": "アリーナ プレシーズン",
       "titleReward": "シーズン称号: {title}",
-      "endsInDays": "残り{count}日",
-      "endsInHours": "残り{count}時間",
-      "endsInMinutes": "残り{count}分",
-      "opensInDays": "{count}日後に開幕",
-      "opensInHours": "{count}時間後に開幕",
-      "opensInMinutes": "{count}分後に開幕",
+      "endsInDays": {
+        "one": "残り{count}日",
+        "few": "残り{count}日",
+        "many": "残り{count}日",
+        "other": "残り{count}日"
+      },
+      "endsInHours": {
+        "one": "残り{count}時間",
+        "few": "残り{count}時間",
+        "many": "残り{count}時間",
+        "other": "残り{count}時間"
+      },
+      "endsInMinutes": {
+        "one": "残り{count}分",
+        "few": "残り{count}分",
+        "many": "残り{count}分",
+        "other": "残り{count}分"
+      },
+      "opensInDays": {
+        "one": "{count}日後に開幕",
+        "few": "{count}日後に開幕",
+        "many": "{count}日後に開幕",
+        "other": "{count}日後に開幕"
+      },
+      "opensInHours": {
+        "one": "{count}時間後に開幕",
+        "few": "{count}時間後に開幕",
+        "many": "{count}時間後に開幕",
+        "other": "{count}時間後に開幕"
+      },
+      "opensInMinutes": {
+        "one": "{count}分後に開幕",
+        "few": "{count}分後に開幕",
+        "many": "{count}分後に開幕",
+        "other": "{count}分後に開幕"
+      },
       "progressLabel": "シーズンの進行",
       "champions": "チャンピオン",
       "seasonLabel": "シーズン{season}",

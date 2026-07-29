@@ -1190,12 +1190,42 @@ export const ru_RU: EnTranslations = {
       "heading": "Арена: сезон {season}",
       "preseasonHeading": "Арена: предсезонье",
       "titleReward": "Титул сезона: {title}",
-      "endsInDays": "Осталось дней: {count}",
-      "endsInHours": "Осталось часов: {count}",
-      "endsInMinutes": "Осталось минут: {count}",
-      "opensInDays": "До начала дней: {count}",
-      "opensInHours": "До начала часов: {count}",
-      "opensInMinutes": "До начала минут: {count}",
+      "endsInDays": {
+        "one": "Остался {count} день",
+        "few": "Осталось {count} дня",
+        "many": "Осталось {count} дней",
+        "other": "Осталось {count} дня"
+      },
+      "endsInHours": {
+        "one": "Остался {count} час",
+        "few": "Осталось {count} часа",
+        "many": "Осталось {count} часов",
+        "other": "Осталось {count} часа"
+      },
+      "endsInMinutes": {
+        "one": "Осталась {count} минута",
+        "few": "Осталось {count} минуты",
+        "many": "Осталось {count} минут",
+        "other": "Осталось {count} минуты"
+      },
+      "opensInDays": {
+        "one": "Откроется через {count} день",
+        "few": "Откроется через {count} дня",
+        "many": "Откроется через {count} дней",
+        "other": "Откроется через {count} дня"
+      },
+      "opensInHours": {
+        "one": "Откроется через {count} час",
+        "few": "Откроется через {count} часа",
+        "many": "Откроется через {count} часов",
+        "other": "Откроется через {count} часа"
+      },
+      "opensInMinutes": {
+        "one": "Откроется через {count} минуту",
+        "few": "Откроется через {count} минуты",
+        "many": "Откроется через {count} минут",
+        "other": "Откроется через {count} минуты"
+      },
       "progressLabel": "Ход сезона",
       "champions": "Чемпионы",
       "seasonLabel": "Сезон {season}",

@@ -1190,12 +1190,42 @@ export const ko_KR: EnTranslations = {
       "heading": "투기장 시즌 {season}",
       "preseasonHeading": "투기장 프리시즌",
       "titleReward": "시즌 칭호: {title}",
-      "endsInDays": "{count}일 후 종료",
-      "endsInHours": "{count}시간 후 종료",
-      "endsInMinutes": "{count}분 후 종료",
-      "opensInDays": "{count}일 후 시작",
-      "opensInHours": "{count}시간 후 시작",
-      "opensInMinutes": "{count}분 후 시작",
+      "endsInDays": {
+        "one": "{count}일 후 종료",
+        "few": "{count}일 후 종료",
+        "many": "{count}일 후 종료",
+        "other": "{count}일 후 종료"
+      },
+      "endsInHours": {
+        "one": "{count}시간 후 종료",
+        "few": "{count}시간 후 종료",
+        "many": "{count}시간 후 종료",
+        "other": "{count}시간 후 종료"
+      },
+      "endsInMinutes": {
+        "one": "{count}분 후 종료",
+        "few": "{count}분 후 종료",
+        "many": "{count}분 후 종료",
+        "other": "{count}분 후 종료"
+      },
+      "opensInDays": {
+        "one": "{count}일 후 시작",
+        "few": "{count}일 후 시작",
+        "many": "{count}일 후 시작",
+        "other": "{count}일 후 시작"
+      },
+      "opensInHours": {
+        "one": "{count}시간 후 시작",
+        "few": "{count}시간 후 시작",
+        "many": "{count}시간 후 시작",
+        "other": "{count}시간 후 시작"
+      },
+      "opensInMinutes": {
+        "one": "{count}분 후 시작",
+        "few": "{count}분 후 시작",
+        "many": "{count}분 후 시작",
+        "other": "{count}분 후 시작"
+      },
       "progressLabel": "시즌 진행도",
       "champions": "챔피언",
       "seasonLabel": "시즌 {season}",

@@ -1190,12 +1190,42 @@ export const en_XA: EnTranslations = {
       "heading": "[Áŕéñá Šéášóñ {season}]",
       "preseasonHeading": "[Áŕéñá Þŕéšéášóñ]",
       "titleReward": "[Šéášóñ ţíţļé: {title}]",
-      "endsInDays": "[Éñðš íñ {count} ðáýš]",
-      "endsInHours": "[Éñðš íñ {count} ĥóúŕš]",
-      "endsInMinutes": "[Éñðš íñ {count} ɱíñúţéš]",
-      "opensInDays": "[Óþéñš íñ {count} ðáýš]",
-      "opensInHours": "[Óþéñš íñ {count} ĥóúŕš]",
-      "opensInMinutes": "[Óþéñš íñ {count} ɱíñúţéš]",
+      "endsInDays": {
+        "one": "[Éñðš íñ {count} ðáý]",
+        "few": "[Éñðš íñ {count} ðáýš]",
+        "many": "[Éñðš íñ {count} ðáýš]",
+        "other": "[Éñðš íñ {count} ðáýš]"
+      },
+      "endsInHours": {
+        "one": "[Éñðš íñ {count} ĥóúŕ]",
+        "few": "[Éñðš íñ {count} ĥóúŕš]",
+        "many": "[Éñðš íñ {count} ĥóúŕš]",
+        "other": "[Éñðš íñ {count} ĥóúŕš]"
+      },
+      "endsInMinutes": {
+        "one": "[Éñðš íñ {count} ɱíñúţé]",
+        "few": "[Éñðš íñ {count} ɱíñúţéš]",
+        "many": "[Éñðš íñ {count} ɱíñúţéš]",
+        "other": "[Éñðš íñ {count} ɱíñúţéš]"
+      },
+      "opensInDays": {
+        "one": "[Óþéñš íñ {count} ðáý]",
+        "few": "[Óþéñš íñ {count} ðáýš]",
+        "many": "[Óþéñš íñ {count} ðáýš]",
+        "other": "[Óþéñš íñ {count} ðáýš]"
+      },
+      "opensInHours": {
+        "one": "[Óþéñš íñ {count} ĥóúŕ]",
+        "few": "[Óþéñš íñ {count} ĥóúŕš]",
+        "many": "[Óþéñš íñ {count} ĥóúŕš]",
+        "other": "[Óþéñš íñ {count} ĥóúŕš]"
+      },
+      "opensInMinutes": {
+        "one": "[Óþéñš íñ {count} ɱíñúţé]",
+        "few": "[Óþéñš íñ {count} ɱíñúţéš]",
+        "many": "[Óþéñš íñ {count} ɱíñúţéš]",
+        "other": "[Óþéñš íñ {count} ɱíñúţéš]"
+      },
       "progressLabel": "[Šéášóñ þŕóĝŕéšš]",
       "champions": "[Çĥáɱþíóñš]",
       "seasonLabel": "[Šéášóñ {season}]",

@@ -5,7 +5,6 @@ import * as fs from 'node:fs';
 import * as http from 'node:http';
 import * as path from 'node:path';
 import { WebSocketServer } from 'ws';
-import { arenaSeasonIndexAt } from '../src/sim/arena_season';
 import { DEEDS } from '../src/sim/content/deeds';
 import { resolveActiveWeaponSkin } from '../src/sim/content/weapon_skin_rules';
 import {
@@ -73,7 +72,7 @@ import {
   pruneArenaSeasonPartnersBatch,
   settledArenaSeasons,
 } from './arena_season_db';
-import { createArenaSeasonSettler } from './arena_season_settlement';
+import { createArenaSeasonSettler, oldestUnsettledArenaSeason } from './arena_season_settlement';
 import {
   hashPassword,
   newToken,
@@ -3029,6 +3028,13 @@ export async function startServer(): Promise<http.Server> {
     console.log(`  WS:   /ws, then first message {t:"${ONLINE_WORLD_AUTH_TYPE}",token,character}`);
   });
 
+  // The retention floor the two season ledgers prune against, resolved per batch
+  // from the persisted settlement markers. A read per batch is the right trade
+  // here: the sweep is nightly and LIMIT-bounded, and the alternative (resolving
+  // it once per run) would go stale across a long drain.
+  const arenaSeasonRetentionFloor = async (): Promise<number> =>
+    oldestUnsettledArenaSeason(Date.now(), await settledArenaSeasons(REALM));
+
   // Off-peak batched retention. The sweep self-clocks once per UTC day behind a
   // database advisory lock, so with several processes exactly one sweeps; each
   // primitive below is one bounded DELETE batch and the sweep drives iteration.
@@ -3089,18 +3095,23 @@ export async function startServer(): Promise<http.Server> {
         pruneBatch: (n) =>
           pruneAccountIpAssociationsBatch(pool, config.accountIpAssociationRetentionDays, n),
       },
-      // Arena season participation. The two ledgers are only read while their
-      // season is still awaiting settlement, so anything strictly older than the
-      // LIVE season is dead weight; the award ledger and the settlement markers
-      // are deliberately never pruned. Retained by season number rather than by
-      // age so a settled season's rows leave together.
+      // Arena season participation. Retained by season NUMBER rather than by age,
+      // so a settled season's rows leave together. The floor is the oldest
+      // UNSETTLED season, never the live one: a just-closed season is strictly
+      // older than the live season, so a live-season floor would let the sweep
+      // delete the very rows the pending settlement is about to rank over, and
+      // that season would then settle with zero champions and stamp its
+      // exactly-once marker (see oldestUnsettledArenaSeason). The award ledger and
+      // the settlement markers are deliberately never pruned.
       {
         name: 'arena_season_entrants',
-        pruneBatch: (n) => pruneArenaSeasonEntrantsBatch(arenaSeasonIndexAt(Date.now()), n),
+        pruneBatch: async (n) =>
+          pruneArenaSeasonEntrantsBatch(await arenaSeasonRetentionFloor(), n),
       },
       {
         name: 'arena_season_partners',
-        pruneBatch: (n) => pruneArenaSeasonPartnersBatch(arenaSeasonIndexAt(Date.now()), n),
+        pruneBatch: async (n) =>
+          pruneArenaSeasonPartnersBatch(await arenaSeasonRetentionFloor(), n),
       },
     ],
     // The fold precondition makes sample pruning lossless; skip the whole group

@@ -1054,12 +1054,47 @@ export const hudChromeStrings = {
     heading: 'Arena Season {season}',
     preseasonHeading: 'Arena Preseason',
     titleReward: 'Season title: {title}',
-    endsInDays: 'Ends in {count} days',
-    endsInHours: 'Ends in {count} hours',
-    endsInMinutes: 'Ends in {count} minutes',
-    opensInDays: 'Opens in {count} days',
-    opensInHours: 'Opens in {count} hours',
-    opensInMinutes: 'Opens in {count} minutes',
+    // CLDR plural forms through tPlural (the hudChrome.plurals.* precedent): the
+    // countdown quantizes to whole days until the last 24 hours, so a flat form
+    // would put "Ends in 1 days" on screen for a full day every season, then
+    // "1 hours", then "1 minutes". Flat keys would also force every locale into
+    // a single form, which the Slavic few/many categories cannot use.
+    endsInDays: {
+      one: 'Ends in {count} day',
+      few: 'Ends in {count} days',
+      many: 'Ends in {count} days',
+      other: 'Ends in {count} days',
+    },
+    endsInHours: {
+      one: 'Ends in {count} hour',
+      few: 'Ends in {count} hours',
+      many: 'Ends in {count} hours',
+      other: 'Ends in {count} hours',
+    },
+    endsInMinutes: {
+      one: 'Ends in {count} minute',
+      few: 'Ends in {count} minutes',
+      many: 'Ends in {count} minutes',
+      other: 'Ends in {count} minutes',
+    },
+    opensInDays: {
+      one: 'Opens in {count} day',
+      few: 'Opens in {count} days',
+      many: 'Opens in {count} days',
+      other: 'Opens in {count} days',
+    },
+    opensInHours: {
+      one: 'Opens in {count} hour',
+      few: 'Opens in {count} hours',
+      many: 'Opens in {count} hours',
+      other: 'Opens in {count} hours',
+    },
+    opensInMinutes: {
+      one: 'Opens in {count} minute',
+      few: 'Opens in {count} minutes',
+      many: 'Opens in {count} minutes',
+      other: 'Opens in {count} minutes',
+    },
     progressLabel: 'Season progress',
     champions: 'Champions',
     seasonLabel: 'Season {season}',
