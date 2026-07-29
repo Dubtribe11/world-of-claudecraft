@@ -135,9 +135,14 @@ export interface WsAuthDeps {
   // The Arena season titles this character has been awarded (deed ids from
   // arena_season_titles). Read on the FRESH-JOIN arm beside the bank bonus and
   // handed to Sim.addPlayer, which grants them through the season roster gate.
-  // Fails SOFT on a read error (resolve []): a database hiccup must not refuse a
-  // handshake over a cosmetic title the next login re-delivers anyway.
-  arenaSeasonTitlesForCharacter: (characterId: number) => Promise<string[]>;
+  //
+  // OPTIONAL, and it fails soft twice over, because nothing about a cosmetic
+  // title is worth refusing a login for: an unwired reader (a test rig, an
+  // embedder, a partial deps bag) yields no titles rather than a TypeError
+  // inside the handshake, and a rejected read resolves [] rather than failing
+  // the handshake the way a getCharacter error does. Either way the award is
+  // still in the ledger and the next login re-delivers it.
+  arenaSeasonTitlesForCharacter?: (characterId: number) => Promise<string[]>;
 }
 
 export interface WsAuthHandlers {
@@ -400,12 +405,12 @@ export function createWsAuth(deps: WsAuthDeps): WsAuthHandlers {
           // Arena season titles are read in the same pre-lease window, and fail
           // soft: an unreachable ledger costs the player a cosmetic title until
           // their next login, which is never worth refusing the handshake over.
-          const arenaSeasonTitles = await arenaSeasonTitlesForCharacter(character.id).catch(
-            (err) => {
-              console.error('arena season titles read failed:', err);
-              return [] as string[];
-            },
-          );
+          const arenaSeasonTitles = arenaSeasonTitlesForCharacter
+            ? await arenaSeasonTitlesForCharacter(character.id).catch((err) => {
+                console.error('arena season titles read failed:', err);
+                return [] as string[];
+              })
+            : [];
           leaseNonce = randomUUID();
           const leased = await acquireCharacterLease(character.id, accountId, leaseNonce);
           if (!leased) {
