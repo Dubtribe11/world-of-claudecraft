@@ -102,6 +102,7 @@ function setup() {
     // meta. The default returns an empty grant so every existing case reaches game.join
     // unchanged; the stamp/resume branches are pinned in the bank-bonus block below.
     bankBonusForAccount: vi.fn(async () => ({ bonusSlots: 0, sources: [] })),
+    arenaSeasonTitlesForCharacter: vi.fn(async () => [] as string[]),
     isConnectionRefused: vi.fn(() => false),
     bufferHandshakeMessages,
     requestMetadata: vi.fn(() => ({ ip: '1.2.3.4', userAgent: 'ua' })),

@@ -1046,6 +1046,25 @@ export const hudChromeStrings = {
     highContrastAria:
       'Toggle high-contrast background: disables the moving trailer so start-screen text stays legible',
   },
+  // The Arena season banner at the top of the Ashen Coliseum window: which
+  // season is live, how long is left in it, the title on offer, and the settled
+  // champions below it. The title itself is never a key here: it is a Book of
+  // Deeds reward that re-localizes from its deed id through deed_i18n.ts.
+  arenaSeason: {
+    heading: 'Arena Season {season}',
+    preseasonHeading: 'Arena Preseason',
+    titleReward: 'Season title: {title}',
+    endsInDays: 'Ends in {count} days',
+    endsInHours: 'Ends in {count} hours',
+    endsInMinutes: 'Ends in {count} minutes',
+    opensInDays: 'Opens in {count} days',
+    opensInHours: 'Opens in {count} hours',
+    opensInMinutes: 'Opens in {count} minutes',
+    progressLabel: 'Season progress',
+    champions: 'Champions',
+    seasonLabel: 'Season {season}',
+    note: 'The highest-rated 1v1 duelist and the highest-rated 2v2 pair earn the season title when the season closes.',
+  },
   warfare: {
     honorAmount: '{amount} Honor',
     dualPrice: '{money} + {honor}',

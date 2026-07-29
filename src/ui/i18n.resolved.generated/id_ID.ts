@@ -1186,6 +1186,21 @@ export const id_ID: EnTranslations = {
       "highContrast": "Kontras Tinggi",
       "highContrastAria": "Alihkan latar belakang kontras tinggi: menonaktifkan cuplikan bergerak agar teks layar mulai tetap terbaca"
     },
+    "arenaSeason": {
+      "heading": "Arena Season {season}",
+      "preseasonHeading": "Arena Preseason",
+      "titleReward": "Season title: {title}",
+      "endsInDays": "Ends in {count} days",
+      "endsInHours": "Ends in {count} hours",
+      "endsInMinutes": "Ends in {count} minutes",
+      "opensInDays": "Opens in {count} days",
+      "opensInHours": "Opens in {count} hours",
+      "opensInMinutes": "Opens in {count} minutes",
+      "progressLabel": "Season progress",
+      "champions": "Champions",
+      "seasonLabel": "Season {season}",
+      "note": "The highest-rated 1v1 duelist and the highest-rated 2v2 pair earn the season title when the season closes."
+    },
     "warfare": {
       "honorAmount": "{amount} Kehormatan",
       "dualPrice": "{money} + {honor}",

@@ -1186,6 +1186,21 @@ export const ko_KR: EnTranslations = {
       "highContrast": "고대비",
       "highContrastAria": "고대비 배경 전환: 움직이는 예고편을 꺼서 시작 화면 텍스트를 읽기 쉽게 유지합니다"
     },
+    "arenaSeason": {
+      "heading": "투기장 시즌 {season}",
+      "preseasonHeading": "투기장 프리시즌",
+      "titleReward": "시즌 칭호: {title}",
+      "endsInDays": "{count}일 후 종료",
+      "endsInHours": "{count}시간 후 종료",
+      "endsInMinutes": "{count}분 후 종료",
+      "opensInDays": "{count}일 후 시작",
+      "opensInHours": "{count}시간 후 시작",
+      "opensInMinutes": "{count}분 후 시작",
+      "progressLabel": "시즌 진행도",
+      "champions": "챔피언",
+      "seasonLabel": "시즌 {season}",
+      "note": "시즌이 끝나면 1v1 최고 점수의 결투가와 2v2 최고 점수의 팀이 시즌 칭호를 얻습니다."
+    },
     "warfare": {
       "honorAmount": "명예 {amount}",
       "dualPrice": "{money} + {honor}",

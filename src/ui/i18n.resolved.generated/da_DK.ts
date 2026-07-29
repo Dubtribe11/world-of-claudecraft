@@ -1186,6 +1186,21 @@ export const da_DK: EnTranslations = {
       "highContrast": "Høj kontrast",
       "highContrastAria": "Slå baggrund med høj kontrast til/fra: deaktiverer den bevægende trailer, så teksten på startskærmen forbliver læselig"
     },
+    "arenaSeason": {
+      "heading": "Arena Season {season}",
+      "preseasonHeading": "Arena Preseason",
+      "titleReward": "Season title: {title}",
+      "endsInDays": "Ends in {count} days",
+      "endsInHours": "Ends in {count} hours",
+      "endsInMinutes": "Ends in {count} minutes",
+      "opensInDays": "Opens in {count} days",
+      "opensInHours": "Opens in {count} hours",
+      "opensInMinutes": "Opens in {count} minutes",
+      "progressLabel": "Season progress",
+      "champions": "Champions",
+      "seasonLabel": "Season {season}",
+      "note": "The highest-rated 1v1 duelist and the highest-rated 2v2 pair earn the season title when the season closes."
+    },
     "warfare": {
       "honorAmount": "{amount} Ære",
       "dualPrice": "{money} + {honor}",

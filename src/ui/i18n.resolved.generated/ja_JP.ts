@@ -1186,6 +1186,21 @@ export const ja_JP: EnTranslations = {
       "highContrast": "高コントラスト",
       "highContrastAria": "高コントラスト背景を切り替えます。動画トレーラーを無効にして、スタート画面のテキストを読みやすくします"
     },
+    "arenaSeason": {
+      "heading": "アリーナ シーズン{season}",
+      "preseasonHeading": "アリーナ プレシーズン",
+      "titleReward": "シーズン称号: {title}",
+      "endsInDays": "残り{count}日",
+      "endsInHours": "残り{count}時間",
+      "endsInMinutes": "残り{count}分",
+      "opensInDays": "{count}日後に開幕",
+      "opensInHours": "{count}時間後に開幕",
+      "opensInMinutes": "{count}分後に開幕",
+      "progressLabel": "シーズンの進行",
+      "champions": "チャンピオン",
+      "seasonLabel": "シーズン{season}",
+      "note": "シーズン終了時、1v1のレート最上位の闘士と2v2のレート最上位のペアがシーズン称号を獲得します。"
+    },
     "warfare": {
       "honorAmount": "名誉 {amount}",
       "dualPrice": "{money} + {honor}",

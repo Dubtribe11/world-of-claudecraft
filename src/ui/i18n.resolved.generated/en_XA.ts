@@ -1186,6 +1186,21 @@ export const en_XA: EnTranslations = {
       "highContrast": "[Ĥíĝĥ Çóñţŕášţ]",
       "highContrastAria": "[Ţóĝĝļé ĥíĝĥ-çóñţŕášţ ƀáçķĝŕóúñð: ðíšáƀļéš ţĥé ɱóʋíñĝ ţŕáíļéŕ šó šţáŕţ-šçŕééñ ţéẋţ šţáýš ļéĝíƀļé]"
     },
+    "arenaSeason": {
+      "heading": "[Áŕéñá Šéášóñ {season}]",
+      "preseasonHeading": "[Áŕéñá Þŕéšéášóñ]",
+      "titleReward": "[Šéášóñ ţíţļé: {title}]",
+      "endsInDays": "[Éñðš íñ {count} ðáýš]",
+      "endsInHours": "[Éñðš íñ {count} ĥóúŕš]",
+      "endsInMinutes": "[Éñðš íñ {count} ɱíñúţéš]",
+      "opensInDays": "[Óþéñš íñ {count} ðáýš]",
+      "opensInHours": "[Óþéñš íñ {count} ĥóúŕš]",
+      "opensInMinutes": "[Óþéñš íñ {count} ɱíñúţéš]",
+      "progressLabel": "[Šéášóñ þŕóĝŕéšš]",
+      "champions": "[Çĥáɱþíóñš]",
+      "seasonLabel": "[Šéášóñ {season}]",
+      "note": "[Ţĥé ĥíĝĥéšţ-ŕáţéð 1ʋ1 ðúéļíšţ áñð ţĥé ĥíĝĥéšţ-ŕáţéð 2ʋ2 þáíŕ éáŕñ ţĥé šéášóñ ţíţļé ŵĥéñ ţĥé šéášóñ çļóšéš.]"
+    },
     "warfare": {
       "honorAmount": "[{amount} Ĥóñóŕ]",
       "dualPrice": "[{money} + {honor}]",

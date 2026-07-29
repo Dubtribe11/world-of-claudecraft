@@ -1186,6 +1186,21 @@ export const ru_RU: EnTranslations = {
       "highContrast": "Высокая контрастность",
       "highContrastAria": "Переключить фон высокой контрастности: отключает движущийся ролик, чтобы текст начального экрана оставался читаемым"
     },
+    "arenaSeason": {
+      "heading": "Арена: сезон {season}",
+      "preseasonHeading": "Арена: предсезонье",
+      "titleReward": "Титул сезона: {title}",
+      "endsInDays": "Осталось дней: {count}",
+      "endsInHours": "Осталось часов: {count}",
+      "endsInMinutes": "Осталось минут: {count}",
+      "opensInDays": "До начала дней: {count}",
+      "opensInHours": "До начала часов: {count}",
+      "opensInMinutes": "До начала минут: {count}",
+      "progressLabel": "Ход сезона",
+      "champions": "Чемпионы",
+      "seasonLabel": "Сезон {season}",
+      "note": "По завершении сезона титул получают дуэлянт с наивысшим рейтингом 1v1 и пара с наивысшим рейтингом 2v2."
+    },
     "warfare": {
       "honorAmount": "{amount} очк. чести",
       "dualPrice": "{money} + {honor}",

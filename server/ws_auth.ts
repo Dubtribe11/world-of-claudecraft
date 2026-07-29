@@ -132,6 +132,12 @@ export interface WsAuthDeps {
   bankBonusForAccount: (
     accountId: number,
   ) => Promise<{ bonusSlots: number; sources: BankBonusSource[] }>;
+  // The Arena season titles this character has been awarded (deed ids from
+  // arena_season_titles). Read on the FRESH-JOIN arm beside the bank bonus and
+  // handed to Sim.addPlayer, which grants them through the season roster gate.
+  // Fails SOFT on a read error (resolve []): a database hiccup must not refuse a
+  // handshake over a cosmetic title the next login re-delivers anyway.
+  arenaSeasonTitlesForCharacter: (characterId: number) => Promise<string[]>;
 }
 
 export interface WsAuthHandlers {
@@ -160,6 +166,7 @@ export function createWsAuth(deps: WsAuthDeps): WsAuthHandlers {
     acquireCharacterLease,
     releaseCharacterLease,
     bankBonusForAccount,
+    arenaSeasonTitlesForCharacter,
   } = deps;
 
   // Character ids whose lease-acquire-through-join section is in flight in THIS
@@ -390,6 +397,15 @@ export function createWsAuth(deps: WsAuthDeps): WsAuthHandlers {
           // Computed BEFORE the lease acquire so the lease-held window stays tight; a bare
           // await means a DB error fails the handshake exactly like a getCharacter failure.
           const bankBonus = await bankBonusForAccount(accountId);
+          // Arena season titles are read in the same pre-lease window, and fail
+          // soft: an unreachable ledger costs the player a cosmetic title until
+          // their next login, which is never worth refusing the handshake over.
+          const arenaSeasonTitles = await arenaSeasonTitlesForCharacter(character.id).catch(
+            (err) => {
+              console.error('arena season titles read failed:', err);
+              return [] as string[];
+            },
+          );
           leaseNonce = randomUUID();
           const leased = await acquireCharacterLease(character.id, accountId, leaseNonce);
           if (!leased) {
@@ -404,7 +420,7 @@ export function createWsAuth(deps: WsAuthDeps): WsAuthHandlers {
             character.class,
             character.state,
             character.is_gm,
-            { ...joinMeta, leaseNonce, bankBonus },
+            { ...joinMeta, leaseNonce, bankBonus, arenaSeasonTitles },
           );
         } finally {
           // Decrement on every fresh-arm exit path (join completed, lease refused,
