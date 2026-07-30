@@ -787,6 +787,7 @@ export const de_DE: EnTranslations = {
       "actionPageIndicator": "Seite {page}",
       "targetCycle": "Ziel tauschen",
       "targetCycleShort": "Ziel",
+      "assistLabel": "Assist",
       "spellbookPageLabel": "Seite {page}",
       "hideKeyboard": "Tastatur ausblenden",
       "chatPlaceholder": "Sag etwas..."
@@ -1062,6 +1063,8 @@ export const de_DE: EnTranslations = {
       "walkByAutoloot": "Plündern im Vorbeigehen",
       "groundReticle": "Bodenziel-Fadenkreuz",
       "mouseoverCast": "Mouseover-Wirken auf Gruppenfenstern",
+      "mobileAssistRotation": "Assist Button (Touch)",
+      "mobileAssistRotationNote": "On touch controls, the big ring button casts the next ability in your class rotation and starts your swings. Long-press it to stop attacking.",
       "stickyTarget": "Ziel bei Bodenklick behalten",
       "showItemLevel": "Gegenstandsstufe anzeigen",
       "itemLevelLine": "Gegenstandsstufe {level}",

@@ -787,6 +787,7 @@ export const es_ES: EnTranslations = {
       "actionPageIndicator": "Pág. {page}",
       "targetCycle": "Cambiar objetivo",
       "targetCycleShort": "Objetivo",
+      "assistLabel": "Assist",
       "spellbookPageLabel": "Página {page}",
       "hideKeyboard": "Ocultar teclado",
       "chatPlaceholder": "Di algo..."
@@ -1062,6 +1063,8 @@ export const es_ES: EnTranslations = {
       "walkByAutoloot": "Saqueo automático al pasar",
       "groundReticle": "Retícula de objetivo terrestre",
       "mouseoverCast": "Lanzar al pasar el ratón sobre los marcos de grupo",
+      "mobileAssistRotation": "Assist Button (Touch)",
+      "mobileAssistRotationNote": "On touch controls, the big ring button casts the next ability in your class rotation and starts your swings. Long-press it to stop attacking.",
       "stickyTarget": "Mantener objetivo al hacer clic en el suelo",
       "showItemLevel": "Mostrar nivel de objeto",
       "itemLevelLine": "Nivel de objeto {level}",

@@ -787,6 +787,7 @@ export const cs_CZ: EnTranslations = {
       "actionPageIndicator": "{page}",
       "targetCycle": "Přepnout cíl",
       "targetCycleShort": "Cíl",
+      "assistLabel": "Assist",
       "spellbookPageLabel": "Strana {page}",
       "hideKeyboard": "Skrýt klávesnici",
       "chatPlaceholder": "Něco napiš..."
@@ -1062,6 +1063,8 @@ export const cs_CZ: EnTranslations = {
       "walkByAutoloot": "Automatická kořist při průchodu",
       "groundReticle": "Zaměřovací kruh na zemi",
       "mouseoverCast": "Sesílání najetím myší na rámech skupiny",
+      "mobileAssistRotation": "Assist Button (Touch)",
+      "mobileAssistRotationNote": "On touch controls, the big ring button casts the next ability in your class rotation and starts your swings. Long-press it to stop attacking.",
       "stickyTarget": "Zachovat cíl při kliknutí na zem",
       "showItemLevel": "Zobrazit úroveň předmětu",
       "itemLevelLine": "Úroveň předmětu {level}",

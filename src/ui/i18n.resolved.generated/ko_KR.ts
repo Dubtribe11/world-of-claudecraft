@@ -787,6 +787,7 @@ export const ko_KR: EnTranslations = {
       "actionPageIndicator": "{page}페이지",
       "targetCycle": "대상 전환",
       "targetCycleShort": "대상",
+      "assistLabel": "보조",
       "spellbookPageLabel": "페이지 {page}",
       "hideKeyboard": "키보드 숨기기",
       "chatPlaceholder": "메시지 입력..."
@@ -1062,6 +1063,8 @@ export const ko_KR: EnTranslations = {
       "walkByAutoloot": "지나가며 자동 획득",
       "groundReticle": "지면 조준 표시기",
       "mouseoverCast": "파티 창에서 마우스오버 시전",
+      "mobileAssistRotation": "보조 버튼(터치)",
+      "mobileAssistRotationNote": "터치 조작에서 링의 큰 버튼이 직업 순환의 다음 기술을 사용하고 자동 공격을 시작합니다. 길게 누르면 공격을 멈춥니다.",
       "stickyTarget": "지면 클릭 시 대상 유지",
       "showItemLevel": "아이템 레벨 표시",
       "itemLevelLine": "아이템 레벨 {level}",

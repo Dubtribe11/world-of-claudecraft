@@ -274,6 +274,12 @@ import {
   ITEM_ICON_PREFIX,
 } from './hud/action_bar/action_bar_view';
 import {
+  type AssistPlayerInput,
+  assistNeedsEnemy,
+  pickAssistAbility,
+} from './hud/action_bar/assist_rotation_core';
+import { resolveAssistTap } from './hud/action_bar/assist_tap_core';
+import {
   abilityStartsAutoAttack,
   deferAutoAttackUntilCastEnd,
   hasAutoAttackTarget,
@@ -989,6 +995,15 @@ export class Hud {
   private mobileActionPage = 0;
   private mobileActionRingView: ActionBarView | undefined;
   private mobileActionRingPainter: MobileActionRingPainter | undefined;
+  // Assist button (settings.mobileAssistRotation, touch only): the ring's primary
+  // seat becomes a one-tap rotation button. Both fields are resolved ONCE per
+  // frame at the top of the ring paint and then read by the ring descriptor's
+  // slot-0 closures, so the priority walk runs once a frame rather than once per
+  // reader. A PRESS re-resolves instead of reading assistPickId: a tap lands
+  // between frames, and the cast should follow the state at press time (a proc
+  // that armed since the last paint is exactly when it matters most).
+  private assistActive = false;
+  private assistPickId: string | null = null;
   // Consumables quick bar (touch): the auto-populated potion/elixir/food/drink
   // row behind the chevron chip next to the top-left trio. consumableBarIds is
   // the ONE reused array the pure core fills WHEN THE ROW OPENS and that stays
@@ -5667,6 +5682,98 @@ export class Hud {
     this.mobileActionPage = nextMobilePage(this.mobileActionPage, this.mobileActionPageCount());
   }
 
+  // --- mobile Assist button (settings.mobileAssistRotation) -----------------
+  // The decision lives in hud/action_bar/assist_rotation_core.ts (the class
+  // priority walk) and assist_tap_core.ts (the four tap meanings). Everything
+  // here is the thin consumer: it hands those cores live state and wires their
+  // answers to the same cast/engage/flash seams a manual slot press uses, so an
+  // assist press can never do something a manual press could not.
+
+  /** Whether the Assist button is live: the opt-in setting on a touch layout.
+   *  Desktop keeps the classic fixed Attack toggle untouched. */
+  private assistRotationActive(): boolean {
+    return (
+      this.isMobileLayout() && Boolean(this.optionsHooks?.settings.get('mobileAssistRotation'))
+    );
+  }
+
+  /** Walk the class priority list against live state. Called once per ring paint
+   *  (for the icon/cooldown/dimming the shared bar view derives) and AGAIN on a
+   *  press, so the cast is decided from the state at press time rather than from
+   *  the last painted frame.
+   *
+   *  `player` lets the per-frame caller hand over the snapshot the action-bar
+   *  family already built for this frame (`abPlayer`), so the hot path does not
+   *  spread the whole player entity a second time; a press omits it and pays for
+   *  its own, which is free at tap cadence. */
+  private resolveAssistPick(player?: AssistPlayerInput): string | null {
+    const p = this.sim.player;
+    const tid = p.targetId;
+    return pickAssistAbility({
+      cls: this.sim.cfg.playerClass,
+      spec: this.sim.talentSpec,
+      known: this.sim.known,
+      // stealthed is derived from auras exactly as the shared action-bar view
+      // takes it: the online mirror never writes Entity.stealthed for self.
+      player: player ?? { ...p, stealthed: playerStealthed(p.auras) },
+      target: tid !== null ? (this.sim.entities.get(tid) ?? null) : null,
+    });
+  }
+
+  private assistAbilityFor(abilityId: string | null): ResolvedAbility | null {
+    if (abilityId === null) return null;
+    return this.sim.known.find((k) => k.def.id === abilityId) ?? null;
+  }
+
+  /** Cast the assist's pick: an ordinary castAbility (the server validates it
+   *  like any other), plus the white-swing engage and the shared used-flash on
+   *  the ring's primary seat. Assist engages auto-attack for an offensive pick
+   *  regardless of the manual-press "Auto-Attack on Ability Use" setting: that
+   *  setting governs the player's own bar presses, while Assist is an explicitly
+   *  opted-into "handle the rotation for me" control, and white swings are part
+   *  of every class's rotation. A TIMED cast defers the engage to castStop for
+   *  the same reason castSlot does (engaging at cast start pulls the mob before
+   *  any damage exists). */
+  private castAssistAbility(abilityId: string): void {
+    const resolved = this.assistAbilityFor(abilityId);
+    if (!resolved) return;
+    this.sim.castAbility(abilityId);
+    const tid = this.sim.player.targetId;
+    const target = tid !== null ? (this.sim.entities.get(tid) ?? null) : null;
+    if (abilityStartsAutoAttack(resolved.effects) && hasAutoAttackTarget(target)) {
+      if (deferAutoAttackUntilCastEnd(resolved.castTime)) this.pendingAutoAttackOnCastEnd = true;
+      else this.sim.startAutoAttack();
+    }
+    this.flashActionSlot(0);
+  }
+
+  /** One press of the ring's primary seat while Assist is on. `heldMs` comes
+   *  from bindTouchTap so a hold can mean "stop attacking" (the toggle-off the
+   *  seat would otherwise no longer offer). */
+  private handleAssistTap(heldMs: number): void {
+    const p = this.sim.player;
+    const tid = p.targetId;
+    const target = tid !== null ? (this.sim.entities.get(tid) ?? null) : null;
+    const abilityId = this.resolveAssistPick();
+    const ability = this.assistAbilityFor(abilityId);
+    resolveAssistTap(
+      {
+        abilityId,
+        // No resolvable ability means the press falls through to the classic
+        // attack path anyway, so the flag's value is moot; true is the safe read.
+        needsEnemy: ability !== null ? assistNeedsEnemy(ability) : true,
+        hasLiveHostileTarget: !!target && !target.dead && target.hostile,
+        autoAttack: p.autoAttack,
+        heldMs,
+      },
+      {
+        castAssist: (id) => this.castAssistAbility(id),
+        attackNearest: this.onMobileAttackNearest,
+        activateAttack: () => this.activateFixedAttackSlot(),
+      },
+    );
+  }
+
   private flashActionSlot(barSlot: number): void {
     const btn = this.abilityButtons[barSlot]?.btn;
     if (btn) this.flashActionButton(btn);
@@ -6095,10 +6202,18 @@ export class Hud {
     // bindTouchTap, not 'click': the browser only synthesizes click for the
     // PRIMARY pointer, so click-bound ring buttons went dead the moment the
     // other thumb held the joystick, which is how combat is actually played.
-    bindTouchTap(attackBtn, () => {
+    bindTouchTap(attackBtn, (_e, heldMs) => {
       this.peekGuard.consume();
       this.hideTooltip();
       audio.click();
+      // Assist on: this seat is the one-tap rotation button instead of the
+      // Attack toggle (see the Assist region above). Off: the classic path below
+      // is byte-identical to what it always did.
+      if (this.assistRotationActive()) {
+        this.handleAssistTap(heldMs);
+        attackBtn.blur();
+        return;
+      }
       const p = this.sim.player;
       const target = p.targetId !== null ? this.sim.entities.get(p.targetId) : null;
       const hasLiveHostileTarget = !!target && !target.dead && target.hostile;
@@ -6150,10 +6265,16 @@ export class Hud {
       {
         slots: [
           {
+            // The primary seat: the fixed Attack toggle normally, the Assist
+            // button while the opt-in setting is on (then it derives like any
+            // ability slot, so the icon, cooldown sweep, unusable/out-of-range
+            // dimming and proc glow all come from the shared bar view). It still
+            // reports hasAction() false either way, keeping the container's
+            // many-spells count byte-identical.
             slotIndex: 0,
-            isAttack: () => true,
+            isAttack: () => !this.assistActive,
             hasAction: () => false,
-            ability: () => null,
+            ability: () => (this.assistActive ? this.assistAbilityFor(this.assistPickId) : null),
             item: () => null,
             keybindLabel: () => '',
           },
@@ -6171,7 +6292,13 @@ export class Hud {
         t,
         abilityName: abilityDisplayName,
         itemName: itemDisplayName,
-        slotLabel: (i) => formatAbilityNumber(i + 1),
+        // The primary seat names itself "Assist" while the assist owns it, so the
+        // shared slotAria key renders "Action slot Assist: Fireball" and the
+        // accessible name states which ability the press will actually fire.
+        slotLabel: (i) =>
+          i === 0 && this.assistActive
+            ? t('hudChrome.mobile.assistLabel')
+            : formatAbilityNumber(i + 1),
         formatCount: (n) => formatNumber(n, { maximumFractionDigits: 0 }),
       },
     );
@@ -7539,6 +7666,12 @@ export class Hud {
     if (this.isMobileLayout() && this.mobileActionRingView && this.mobileActionRingPainter) {
       const mobileActionPage = this.currentMobileActionPage();
       const mobileActionSourceSlotCount = this.mobileActionSourceSlotCount();
+      // Resolve the Assist pick ONCE per frame, before tick(): the ring
+      // descriptor's slot-0 closures read these two fields, so the priority walk
+      // runs once a frame rather than once per reader. The primary seat stays
+      // visible while the assist owns it even if the player freed slot 0.
+      this.assistActive = this.assistRotationActive();
+      this.assistPickId = this.assistActive ? this.resolveAssistPick(abPlayer) : null;
       this.mobileActionRingPainter.paint(
         this.mobileActionRingView.tick({
           player: abPlayer,
@@ -7548,7 +7681,8 @@ export class Hud {
         mobileActionPage,
         mobilePageCount(mobileActionSourceSlotCount),
         mobileActionSourceSlotCount,
-        this.attackSlotIsAttack(),
+        this.attackSlotIsAttack() || this.assistActive,
+        this.assistActive,
       );
     }
 

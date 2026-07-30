@@ -9,25 +9,85 @@
 // Reproducibility is checked by tests/i18n_resolved_equivalence.test.ts.
 
 export const pending: Record<string, readonly string[]> = {
-  "es": [],
-  "es_ES": [],
-  "fr_FR": [],
-  "fr_CA": [],
+  "es": [
+    "hudChrome.mobile.assistLabel",
+    "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationNote"
+  ],
+  "es_ES": [
+    "hudChrome.mobile.assistLabel",
+    "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationNote"
+  ],
+  "fr_FR": [
+    "hudChrome.mobile.assistLabel",
+    "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationNote"
+  ],
+  "fr_CA": [
+    "hudChrome.mobile.assistLabel",
+    "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationNote"
+  ],
   "en_CA": [],
-  "it_IT": [],
-  "de_DE": [],
+  "it_IT": [
+    "hudChrome.mobile.assistLabel",
+    "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationNote"
+  ],
+  "de_DE": [
+    "hudChrome.mobile.assistLabel",
+    "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationNote"
+  ],
   "zh_CN": [],
   "zh_TW": [],
   "ko_KR": [],
   "ja_JP": [],
-  "pt_BR": [],
+  "pt_BR": [
+    "hudChrome.mobile.assistLabel",
+    "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationNote"
+  ],
   "ru_RU": [],
-  "cs_CZ": [],
-  "nl_NL": [],
-  "pl_PL": [],
-  "id_ID": [],
-  "tr_TR": [],
-  "sv_SE": [],
-  "vi_VN": [],
-  "da_DK": []
+  "cs_CZ": [
+    "hudChrome.mobile.assistLabel",
+    "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationNote"
+  ],
+  "nl_NL": [
+    "hudChrome.mobile.assistLabel",
+    "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationNote"
+  ],
+  "pl_PL": [
+    "hudChrome.mobile.assistLabel",
+    "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationNote"
+  ],
+  "id_ID": [
+    "hudChrome.mobile.assistLabel",
+    "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationNote"
+  ],
+  "tr_TR": [
+    "hudChrome.mobile.assistLabel",
+    "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationNote"
+  ],
+  "sv_SE": [
+    "hudChrome.mobile.assistLabel",
+    "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationNote"
+  ],
+  "vi_VN": [
+    "hudChrome.mobile.assistLabel",
+    "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationNote"
+  ],
+  "da_DK": [
+    "hudChrome.mobile.assistLabel",
+    "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationNote"
+  ]
 };

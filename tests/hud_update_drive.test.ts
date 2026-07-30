@@ -602,6 +602,20 @@ const HUD_UPDATE_DRIVES: readonly DriveRow[] = [
     why: 'counts the source slots that determine the touch action ring pagination; no DOM write',
   },
   {
+    call: 'this.assistRotationActive',
+    band: 'frame',
+    gate: 'this.isMobileLayout() && this.mobileActionRingView && this.mobileActionRingPainter',
+    surface: 'none',
+    why: 'reads the opt-in Assist setting once per frame (the ring descriptor and the tap handler both consume the cached field); no DOM write',
+  },
+  {
+    call: 'this.resolveAssistPick',
+    band: 'frame',
+    gate: 'this.isMobileLayout() && this.mobileActionRingView && this.mobileActionRingPainter && this.assistActive',
+    surface: 'none',
+    why: 'walks the class rotation priority list for the Assist button, once per frame and ONLY while Assist is on; pure evaluation over the live snapshot, no DOM write',
+  },
+  {
     call: 'this.mobileActionRingPainter.paint',
     band: 'frame',
     gate: 'this.isMobileLayout() && this.mobileActionRingView && this.mobileActionRingPainter',
@@ -1298,7 +1312,7 @@ describe('Hud.update() drives exactly the registered set, on the registered band
     expect(
       bySurface,
       "the surface split moved. A new call needs its surface decided; a CHANGED one means a repaint was reclassified, which is the one edit that can quietly drop a window row's invalidation guard.",
-    ).toEqual({ window: 37, chrome: 68, none: 14 });
+    ).toEqual({ window: 37, chrome: 68, none: 16 });
     const windows = HUD_UPDATE_DRIVES.filter((r) => r.surface === 'window');
     expect(windows.map((r) => r.call)).toContain('this.spellbookWindow.tickOpen');
     expect(windows.map((r) => r.call)).toContain('this.refreshOpenTownFocusIfChanged');
