@@ -8295,7 +8295,8 @@ export const ja_JP: Partial<Record<TranslationKey, string>> = {
   'hud.combat.parried': '{target}は{ability}を受け流しました。',
   'hudChrome.options.mouseoverCast': 'パーティフレームでマウスオーバーキャスト',
   'hudChrome.options.mobileAssistRotation': 'アシストボタン（タッチ）',
-  'hudChrome.options.mobileAssistRotationNote': 'タッチ操作では、リングの大きなボタンがクラスのローテーションの次のアビリティを発動し、通常攻撃を開始します。長押しで攻撃を停止します。',
+  'hudChrome.options.mobileAssistRotationNote':
+    'タッチ操作では、リングの大きなボタンがクラスのローテーションの次のアビリティを発動し、通常攻撃を開始します。長押しで攻撃を停止します。',
   'hudChrome.options.showTargetOfTarget': 'ターゲットのターゲットを表示',
   'hudChrome.options.stickyTarget': '地面クリックでターゲットを維持',
   'hudChrome.unitFrame.targetOfTargetLabel': 'ターゲットのターゲット',

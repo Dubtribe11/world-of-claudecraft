@@ -8451,7 +8451,8 @@ export const ru_RU: Partial<Record<TranslationKey, string>> = {
   'hud.combat.parried': '{target} парирует ваш {ability}.',
   'hudChrome.options.mouseoverCast': 'Применение по наведению на рамки группы',
   'hudChrome.options.mobileAssistRotation': 'Кнопка помощи (касание)',
-  'hudChrome.options.mobileAssistRotationNote': 'При сенсорном управлении большая кнопка круга применяет следующую способность ротации вашего класса и начинает автоатаку. Удерживайте её, чтобы прекратить атаку.',
+  'hudChrome.options.mobileAssistRotationNote':
+    'При сенсорном управлении большая кнопка круга применяет следующую способность ротации вашего класса и начинает автоатаку. Удерживайте её, чтобы прекратить атаку.',
   'hudChrome.options.showTargetOfTarget': 'Показывать цель цели',
   'hudChrome.options.stickyTarget': 'Сохранять цель при клике по земле',
   'hudChrome.unitFrame.targetOfTargetLabel': 'Цель цели',
