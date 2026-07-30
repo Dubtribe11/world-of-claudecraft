@@ -4126,6 +4126,13 @@ export class GameServer {
           // the classic current-target-else-self resolution when invalid.
           if (typeof msg.target === 'number') {
             sim.castAbilityOn(msg.ability, msg.target | 0, pid);
+          } else if (msg.assist === 1) {
+            // Mobile Assist button: the client declares that this press came from
+            // the evaluated rotation, and the sim arms the taxed global cooldown
+            // for it. Trusted the same way the rest of the cast payload is, and
+            // safe to trust because the flag can only slow the caster down: every
+            // gate, cost and target rule stays server-authoritative below.
+            sim.castAssistedAbility(msg.ability, pid);
           } else {
             sim.castAbility(msg.ability, pid);
           }

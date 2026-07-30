@@ -888,7 +888,12 @@ export const hudChromeStrings = {
     // class rotation instead of toggling auto-attack. Touch layouts only.
     mobileAssistRotation: 'Assist Button (Touch)',
     mobileAssistRotationNote:
-      'On touch controls, the big ring button casts the next ability in your class rotation and starts your swings. Long-press it to stop attacking.',
+      'On touch controls, the big ring button casts the next ability in your class rotation and starts your swings. Press and hold it to stop attacking.',
+    // The balance note that must ship WITH the toggle: an assisted press arms a
+    // longer global cooldown than a manual one (sim/combat/assist_gcd.ts), so the
+    // player has to be told the trade before opting in, not discover it in a fight.
+    mobileAssistRotationGcdNote:
+      'Casts fired by the Assist button leave a longer global cooldown than pressing the ability yourself, so the rotation runs a little slower than playing it by hand.',
     // Combat-tab toggle (off by default: ground left-clicks clear the target,
     // the classic behavior). On keeps the target on a ground left-click so
     // click-to-move repositioning does not deselect.

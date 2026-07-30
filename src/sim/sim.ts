@@ -5258,6 +5258,16 @@ export class Sim {
     castAbilityImpl(this.ctx, abilityId, pid, aim);
   }
 
+  // IWorld assisted cast: the mobile Assist button's evaluated rotation step. An
+  // ordinary cast in every respect (same gates, same server authority) EXCEPT the
+  // global cooldown it arms, which carries the assist tax so a hands-off rotation
+  // runs slower than one the player drives (combat/assist_gcd.ts). A separate
+  // member rather than a flag on castAbility so the intent is visible at every
+  // call site and on the wire, and so no ordinary cast can pick it up by accident.
+  castAssistedAbility(abilityId: string, pid?: number): void {
+    castAbilityImpl(this.ctx, abilityId, pid, undefined, null, { assisted: true });
+  }
+
   // IWorld ground-targeted cast: offline, the local player (pid undefined) casts
   // the ability aimed at the world point (x, z).
   castAbilityAt(abilityId: string, aim: { x: number; z: number }): void {

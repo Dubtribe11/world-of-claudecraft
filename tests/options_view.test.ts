@@ -355,6 +355,7 @@ const COMBAT_KEYS = [
   // discoverable from the button itself, so the note is part of the control.
   'mobileAssistRotation',
   'note:hudChrome.options.mobileAssistRotationNote',
+  'note:hudChrome.options.mobileAssistRotationGcdNote',
   'stickyTarget',
   'fctScale',
   'showSecondaryActionBar',
@@ -465,6 +466,7 @@ describe('options_view: interface tab taxonomy', () => {
     // cannot be added or dropped without a diff line here.
     expect(notes.map((c) => (c.control === 'note' ? c.textKey : ''))).toEqual([
       'hudChrome.options.mobileAssistRotationNote',
+      'hudChrome.options.mobileAssistRotationGcdNote',
     ]);
     // showAttackButton in particular resolves to a single combat-tab control
     expect(all.filter((c) => 'key' in c && c.key === 'showAttackButton')).toHaveLength(1);

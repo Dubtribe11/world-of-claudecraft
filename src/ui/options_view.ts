@@ -475,6 +475,7 @@ export function buildInterfaceControls(s: OptionsSettingsSource): OptionsControl
       boolToggle(s, 'mouseoverCast', 'hudChrome.options.mouseoverCast'),
       boolToggle(s, 'mobileAssistRotation', 'hudChrome.options.mobileAssistRotation'),
       note('hudChrome.options.mobileAssistRotationNote'),
+      note('hudChrome.options.mobileAssistRotationGcdNote'),
       boolToggle(s, 'stickyTarget', 'hudChrome.options.stickyTarget'),
       slider(s, 'fctScale', 'hud.options.fctScale'),
       boolToggle(s, 'showSecondaryActionBar', 'hudChrome.options.showSecondaryActionBar', {

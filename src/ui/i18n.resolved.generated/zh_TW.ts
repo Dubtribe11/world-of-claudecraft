@@ -1065,6 +1065,7 @@ export const zh_TW: EnTranslations = {
       "mouseoverCast": "對隊伍框架滑鼠指向施法",
       "mobileAssistRotation": "輔助按鈕（觸控）",
       "mobileAssistRotationNote": "在觸控操作下，環形大按鈕會施放你職業循環中的下一個技能並開始普攻。長按可停止攻擊。",
+      "mobileAssistRotationGcdNote": "由輔助按鈕施放的技能，其公共冷卻時間比你自己按下技能時更長，因此循環會比手動操作稍慢一些。",
       "stickyTarget": "點擊地面時保留目標",
       "showItemLevel": "顯示物品等級",
       "itemLevelLine": "物品等級 {level}",

@@ -7891,6 +7891,8 @@ export const zh_CN: Partial<Record<TranslationKey, string>> = {
   'hudChrome.options.mobileAssistRotation': '辅助按钮（触屏）',
   'hudChrome.options.mobileAssistRotationNote':
     '在触屏操作下，环形大按钮会施放你职业循环中的下一个技能并开始普攻。长按可停止攻击。',
+  'hudChrome.options.mobileAssistRotationGcdNote':
+    '由辅助按钮施放的技能，其公共冷却时间比你自己按下技能时更长，因此循环会比手动操作稍慢一些。',
   'hudChrome.options.showTargetOfTarget': '显示目标的目标',
   'hudChrome.options.stickyTarget': '点击地面时保留目标',
   'hudChrome.unitFrame.targetOfTargetLabel': '目标的目标',

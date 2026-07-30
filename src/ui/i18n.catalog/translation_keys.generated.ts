@@ -6252,6 +6252,7 @@ export type TranslationKeyFlat =
   | 'hudChrome.options.keybindHelpLockCursorOnRotate'
   | 'hudChrome.options.lockCursorOnRotate'
   | 'hudChrome.options.mobileAssistRotation'
+  | 'hudChrome.options.mobileAssistRotationGcdNote'
   | 'hudChrome.options.mobileAssistRotationNote'
   | 'hudChrome.options.mobileCameraJoystick'
   | 'hudChrome.options.mobileLeftHanded'

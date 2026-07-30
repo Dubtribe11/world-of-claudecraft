@@ -29,14 +29,85 @@ Combat), on a touch layout:
 - A tap with nothing selected acquires the nearest enemy first and starts
   swinging, exactly like the classic Attack button's first press. The next tap
   casts.
-- A long press (>= `ASSIST_STOP_ATTACK_HOLD_MS`) while swinging stops auto-attack,
-  which is the toggle-off the seat would otherwise no longer offer. The gesture
-  matches the mobile Chat button's existing long-press vocabulary.
+- A press and hold (>= `ASSIST_STOP_ATTACK_HOLD_MS`) while swinging stops
+  auto-attack, which is the toggle-off the seat would otherwise no longer offer.
+  It fires from a TIMER at the threshold, while the finger is still down, so the
+  player feels it land; the release that ends that press does not also cast. See
+  "The hold is timer-fired" below for why that is load-bearing rather than a
+  detail.
+- An assisted cast leaves a LONGER global cooldown than pressing the ability
+  yourself. See "The global cooldown tax" below.
 - Its accessible name reads "Action slot Assist: Fireball": it names the ability
   that will actually fire, through the existing `abilityUi.actionBar.slotAria` key.
 
 With the setting off, nothing changes: the seat is the classic Attack toggle and
 none of the assist code runs.
+
+## The hold is timer-fired, not measured at release
+
+The gesture was first shipped the other way round: `bindTouchTap` measured how
+long the finger was down and the tap resolver classified the press at `pointerup`.
+That is broken, and not subtly.
+
+`pointerup` is dispatched on the main thread. On a phone rendering a 3D world the
+main thread is busy, so the event is delivered well after the finger actually
+lifted, and `Date.now()` read inside the handler measures dispatch latency rather
+than contact time. Driving the real button through a headless client measured
+300-900ms for taps that were instantaneous at the harness level. Because
+auto-attack is on for the whole fight, the "swinging plus long press" branch was
+live on every combat press, so roughly every other tap stopped the player's
+swings instead of casting. The button read as dead.
+
+Two changes fix it, and both are needed:
+
+1. **The threshold is fired by a timer while the finger is down**
+   (`TouchHoldSpec` in `src/ui/touch_tap.ts`), which is how every other
+   long-press in this tree already works (the Chat button, touch item drag, the
+   mobile context menu, pet autocast). A press the hold consumed does not also
+   tap, and `onHold` returning false leaves the press an ordinary tap, which is
+   what the seat does while Assist is off so the classic Attack toggle is
+   untouched.
+2. **The threshold is a deliberate hold, not a slow-tap boundary.** It sits past
+   the mobile context menu's 650ms long-press, because a rare gesture sharing the
+   hottest button in the game has to be unmistakable.
+
+`assist_tap_core` therefore takes an explicit `stopAttackHold` boolean and no
+duration at all: there is no measured hold anywhere in the path, so the failure
+mode cannot come back by a caller reading the wrong clock.
+
+## The global cooldown tax
+
+An assisted press casts through `IWorld.castAssistedAbility` instead of
+`castAbility`, and the only difference is the global cooldown it arms:
+`ASSIST_GCD_PENALTY_MULT` longer (`src/sim/combat/assist_gcd.ts`).
+
+Why a tax exists at all: the button plays a rotation no thumb could otherwise
+reach, with perfect ordering and perfect upkeep. Untaxed that is free throughput
+over a player working their own bar, so the trade is made explicit. The assist
+keeps the convenience and gives back some of the speed; a player who wants the
+fastest rotation still drives it themselves.
+
+Why the GCD and not a damage modifier:
+
+- It scales with USE. Every assisted press pays; a manual press in between never
+  does, so a player who mixes the two pays exactly in proportion.
+- It needs no per-ability balance table and cannot become a damage exploit: it
+  never touches an ability's own numbers, only how soon the next press lands.
+- It shows up in the UI for free. The action bar already paints
+  `player.gcdRemaining`, so the longer sweep IS the feedback.
+- Haste keeps helping. The tax is applied AFTER the class GCD, spell haste and
+  the `MIN_GCD` floor, so an assisted rotation still scales with haste
+  proportionally instead of having it cancelled out.
+
+The flag is a client-declared intent the server trusts, like the rest of the cast
+payload. That is deliberate: a client that lies about it is a client running its
+own rotation script, which no server-side check distinguishes from a fast player
+anyway, so the honest signal is what the tax is priced against. The flag can only
+ever make the caster SLOWER, and the server reads it as an exact `=== 1` so a
+malformed payload degrades to an ordinary cast rather than silently penalising a
+player who never opted in. Options > Interface > Combat states the trade next to
+the toggle (`hudChrome.options.mobileAssistRotationGcdNote`), so nobody discovers
+it mid-fight.
 
 ## Why the primary seat, and not a new button
 
@@ -60,6 +131,9 @@ than a new idiom.
 | The authored priority list per class, and the condition vocabulary | `src/sim/content/rotations.ts` |
 | The evaluator (which ability, right now) | `src/ui/hud/action_bar/assist_rotation_core.ts` |
 | The four tap meanings | `src/ui/hud/action_bar/assist_tap_core.ts` |
+| The timer-fired long-press binding (`TouchHoldSpec`) | `src/ui/touch_tap.ts` |
+| The global cooldown tax | `src/sim/combat/assist_gcd.ts` |
+| The taxed cast seam | `src/world_api/combat.ts`, `src/sim/sim.ts`, `src/net/online.ts`, `server/game.ts` |
 | The primary-seat presentation flag | `src/ui/hud/action_bar/mobile_action_ring_painter.ts` |
 | The wiring (descriptor slot 0, the tap, the per-frame resolve) | `src/ui/hud.ts` |
 | The setting | `src/game/settings.ts`, `src/ui/options_view.ts` |
@@ -122,18 +196,23 @@ feeds Fingers of Frost.
 
 ## Fairness and authority
 
-- **The server is unchanged.** A tap sends the ordinary `castAbility` command for
-  an ability the player already knows, validated and resolved server-side exactly
-  as if they had pressed that ability's own button. Nothing here can make a cast
-  succeed that a manual press would not, and no new wire command exists.
-- **No sim change, no determinism surface.** The evaluator is client presentation
-  logic. It draws no rng and reads only state both worlds already mirror, so the
-  offline `Sim` and the online `ClientWorld` reach the same verdict.
+- **Server authority is unchanged.** A tap sends the ordinary `cast` command (with
+  an `assist` marker, no new wire token) for an ability the player already knows,
+  validated and resolved server-side exactly as if they had pressed that ability's
+  own button. Nothing here can make a cast succeed that a manual press would not.
+- **The evaluator draws no rng.** It is client presentation logic reading only
+  state both worlds already mirror, so the offline `Sim` and the online
+  `ClientWorld` reach the same verdict.
+- **The one sim change is the tax**, and it is deterministic: a plain multiplier on
+  the resolved GCD, no clock and no rng, so the same assisted cast arms the same
+  cooldown on all three hosts. Manual casts are byte-identical to before, which is
+  why the golden-trace parity gate stays green.
 - **Not a graphics tier knob.** The assist is a player setting, never shed by a
   preset or the FPS governor, so it cannot hide or delay anything actionable.
 - **It is not a damage buff for experts.** A priority list plays a clean baseline
   rotation; it does not react to anything a player at a keyboard cannot. What it
-  removes is the page-cycling tax that only touch players pay.
+  removes is the page-cycling tax that only touch players pay, and the GCD tax
+  above prices what perfect ordering is worth.
 
 ## Known limits (deliberate, and where to pick them up)
 

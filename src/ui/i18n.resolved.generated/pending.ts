@@ -12,32 +12,38 @@ export const pending: Record<string, readonly string[]> = {
   "es": [
     "hudChrome.mobile.assistLabel",
     "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationGcdNote",
     "hudChrome.options.mobileAssistRotationNote"
   ],
   "es_ES": [
     "hudChrome.mobile.assistLabel",
     "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationGcdNote",
     "hudChrome.options.mobileAssistRotationNote"
   ],
   "fr_FR": [
     "hudChrome.mobile.assistLabel",
     "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationGcdNote",
     "hudChrome.options.mobileAssistRotationNote"
   ],
   "fr_CA": [
     "hudChrome.mobile.assistLabel",
     "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationGcdNote",
     "hudChrome.options.mobileAssistRotationNote"
   ],
   "en_CA": [],
   "it_IT": [
     "hudChrome.mobile.assistLabel",
     "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationGcdNote",
     "hudChrome.options.mobileAssistRotationNote"
   ],
   "de_DE": [
     "hudChrome.mobile.assistLabel",
     "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationGcdNote",
     "hudChrome.options.mobileAssistRotationNote"
   ],
   "zh_CN": [],
@@ -47,47 +53,56 @@ export const pending: Record<string, readonly string[]> = {
   "pt_BR": [
     "hudChrome.mobile.assistLabel",
     "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationGcdNote",
     "hudChrome.options.mobileAssistRotationNote"
   ],
   "ru_RU": [],
   "cs_CZ": [
     "hudChrome.mobile.assistLabel",
     "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationGcdNote",
     "hudChrome.options.mobileAssistRotationNote"
   ],
   "nl_NL": [
     "hudChrome.mobile.assistLabel",
     "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationGcdNote",
     "hudChrome.options.mobileAssistRotationNote"
   ],
   "pl_PL": [
     "hudChrome.mobile.assistLabel",
     "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationGcdNote",
     "hudChrome.options.mobileAssistRotationNote"
   ],
   "id_ID": [
     "hudChrome.mobile.assistLabel",
     "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationGcdNote",
     "hudChrome.options.mobileAssistRotationNote"
   ],
   "tr_TR": [
     "hudChrome.mobile.assistLabel",
     "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationGcdNote",
     "hudChrome.options.mobileAssistRotationNote"
   ],
   "sv_SE": [
     "hudChrome.mobile.assistLabel",
     "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationGcdNote",
     "hudChrome.options.mobileAssistRotationNote"
   ],
   "vi_VN": [
     "hudChrome.mobile.assistLabel",
     "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationGcdNote",
     "hudChrome.options.mobileAssistRotationNote"
   ],
   "da_DK": [
     "hudChrome.mobile.assistLabel",
     "hudChrome.options.mobileAssistRotation",
+    "hudChrome.options.mobileAssistRotationGcdNote",
     "hudChrome.options.mobileAssistRotationNote"
   ]
 };

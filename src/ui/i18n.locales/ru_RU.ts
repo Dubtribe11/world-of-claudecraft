@@ -8453,6 +8453,8 @@ export const ru_RU: Partial<Record<TranslationKey, string>> = {
   'hudChrome.options.mobileAssistRotation': 'Кнопка помощи (касание)',
   'hudChrome.options.mobileAssistRotationNote':
     'При сенсорном управлении большая кнопка круга применяет следующую способность ротации вашего класса и начинает автоатаку. Удерживайте её, чтобы прекратить атаку.',
+  'hudChrome.options.mobileAssistRotationGcdNote':
+    'Способности, применённые кнопкой помощи, оставляют более длительное общее время восстановления, чем нажатые вручную, поэтому ротация идёт немного медленнее, чем при игре руками.',
   'hudChrome.options.showTargetOfTarget': 'Показывать цель цели',
   'hudChrome.options.stickyTarget': 'Сохранять цель при клике по земле',
   'hudChrome.unitFrame.targetOfTargetLabel': 'Цель цели',
