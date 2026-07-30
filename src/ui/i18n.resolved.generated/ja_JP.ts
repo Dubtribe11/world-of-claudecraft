@@ -787,6 +787,7 @@ export const ja_JP: EnTranslations = {
       "actionPageIndicator": "{page}ページ",
       "targetCycle": "ターゲット切替",
       "targetCycleShort": "標的",
+      "assistLabel": "アシスト",
       "spellbookPageLabel": "ページ{page}",
       "hideKeyboard": "キーボードを隠す",
       "chatPlaceholder": "発言する..."
@@ -1062,6 +1063,9 @@ export const ja_JP: EnTranslations = {
       "walkByAutoloot": "通りがかり自動ルート",
       "groundReticle": "地面ターゲットのレティクル",
       "mouseoverCast": "パーティフレームでマウスオーバーキャスト",
+      "mobileAssistRotation": "アシストボタン（タッチ）",
+      "mobileAssistRotationNote": "タッチ操作では、リングの大きなボタンがクラスのローテーションの次のアビリティを発動し、通常攻撃を開始します。長押しで攻撃を停止します。",
+      "mobileAssistRotationGcdNote": "アシストボタンで発動した呪文は、自分でアビリティを押した場合よりもグローバルクールダウンが長くなるため、手動で回すよりローテーションが少し遅くなります。",
       "stickyTarget": "地面クリックでターゲットを維持",
       "showItemLevel": "アイテムレベルを表示",
       "itemLevelLine": "アイテムレベル {level}",

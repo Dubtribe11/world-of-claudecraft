@@ -4400,6 +4400,7 @@ export const ko_KR: Partial<Record<TranslationKey, string>> = {
   'hudChrome.mobile.nameplates': '이름표',
   'hudChrome.mobile.targetCycle': '대상 전환',
   'hudChrome.mobile.targetCycleShort': '대상',
+  'hudChrome.mobile.assistLabel': '보조',
   'hudChrome.mobile.toggleHaptics': '진동 전환',
   'hudChrome.rest.resting': '휴식 중',
   'hudChrome.swing.ready': '공격',
@@ -8278,6 +8279,11 @@ export const ko_KR: Partial<Record<TranslationKey, string>> = {
   'hud.combat.floatingParry': '무기 막기',
   'hud.combat.parried': '{target}이 당신의 {ability}을 무기로 막았습니다.',
   'hudChrome.options.mouseoverCast': '파티 창에서 마우스오버 시전',
+  'hudChrome.options.mobileAssistRotation': '보조 버튼(터치)',
+  'hudChrome.options.mobileAssistRotationNote':
+    '터치 조작에서 링의 큰 버튼이 직업 순환의 다음 기술을 사용하고 자동 공격을 시작합니다. 길게 누르면 공격을 멈춥니다.',
+  'hudChrome.options.mobileAssistRotationGcdNote':
+    '보조 버튼으로 시전한 기술은 직접 기술을 누를 때보다 전역 재사용 대기시간이 길어지므로, 손으로 직접 돌리는 것보다 순환이 조금 느려집니다.',
   'hudChrome.options.showTargetOfTarget': '대상의 대상 표시',
   'hudChrome.options.stickyTarget': '지면 클릭 시 대상 유지',
   'hudChrome.unitFrame.targetOfTargetLabel': '대상의 대상',

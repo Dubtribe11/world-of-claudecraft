@@ -447,6 +447,71 @@ describe('MobileActionRingPainter: removable attack control', () => {
   });
 });
 
+describe('MobileActionRingPainter: the Assist primary seat', () => {
+  // The class is the ONLY presentation difference the painter owns: it tells
+  // hud.mobile.css to get the static attack glyph out of the way of the ability
+  // icon the shared bar painter writes on the same button, and to switch the
+  // accent. Everything else about the seat (icon, cooldown sweep, dimming) comes
+  // from the shared ActionBarState, so there is nothing else to assert here.
+  const paintWith = (assistActive: boolean) => {
+    const { calls, writers } = recordingFacet();
+    const els = [0, 1, 2, 3, 4, 5].map((i) => slotElements(`ring${i}`));
+    const painter = new MobileActionRingPainter(
+      writers,
+      {
+        bar: {
+          container: { tag: 'ring-container' } as unknown as HTMLElement,
+          slots: els,
+        },
+        pageToggle: { tag: 'toggle' } as unknown as HTMLElement,
+        pageIndicator: { tag: 'indicator' } as unknown as HTMLElement,
+      },
+      (key) => `URL(${key})`,
+      (key, values) => (values ? `${key}|${JSON.stringify(values)}` : key),
+    );
+    const view = createActionBarView({ slots: ringDescriptor({ page: 0 }, new Map()) }, fakeDeps());
+    painter.paint(view.tick(idleWorld()), 0, 2, undefined, true, assistActive);
+    return { calls, els };
+  };
+
+  it('toggles the assist class on the primary button, and only on that button', () => {
+    const on = paintWith(true);
+    expect(on.calls).toContainEqual({ m: 'toggleClass', args: [on.els[0].btn, 'assist', true] });
+    for (let i = 1; i < 6; i++) {
+      expect(on.calls).not.toContainEqual({
+        m: 'toggleClass',
+        args: [on.els[i].btn, 'assist', true],
+      });
+    }
+  });
+
+  it('clears the class when Assist is off, so the seat is the plain Attack toggle', () => {
+    const off = paintWith(false);
+    expect(off.calls).toContainEqual({ m: 'toggleClass', args: [off.els[0].btn, 'assist', false] });
+  });
+
+  it('defaults to off, so an unaware caller never gets the assist presentation', () => {
+    const { calls, writers } = recordingFacet();
+    const els = [0, 1, 2, 3, 4, 5].map((i) => slotElements(`ring${i}`));
+    const painter = new MobileActionRingPainter(
+      writers,
+      {
+        bar: {
+          container: { tag: 'ring-container' } as unknown as HTMLElement,
+          slots: els,
+        },
+        pageToggle: { tag: 'toggle' } as unknown as HTMLElement,
+        pageIndicator: { tag: 'indicator' } as unknown as HTMLElement,
+      },
+      (key) => `URL(${key})`,
+      (key, values) => (values ? `${key}|${JSON.stringify(values)}` : key),
+    );
+    const view = createActionBarView({ slots: ringDescriptor({ page: 0 }, new Map()) }, fakeDeps());
+    painter.paint(view.tick(idleWorld()), 0, 2);
+    expect(calls).toContainEqual({ m: 'toggleClass', args: [els[0].btn, 'assist', false] });
+  });
+});
+
 describe('mobile action ring: alloc stability', () => {
   it('the ring view stays allocation-stable across page flips (fixed descriptor + mutable closure)', () => {
     const pageBox = { page: 0 };
@@ -533,8 +598,73 @@ describe('Hud.buildMobileActionRing wiring (source scan)', () => {
   });
 
   it('passes the live Show Attack Button setting into the mobile ring painter', () => {
+    // OR'd with assistActive: with Assist on the primary seat is the assist
+    // button, so it stays visible even for a player who freed slot 0.
     expect(hud).toMatch(
-      /this\.mobileActionRingPainter\.paint\([\s\S]*?this\.attackSlotIsAttack\(\),[\s\S]*?\);/,
+      /this\.mobileActionRingPainter\.paint\([\s\S]*?this\.attackSlotIsAttack\(\) \|\| this\.assistActive,[\s\S]*?\);/,
+    );
+  });
+
+  it('resolves the Assist pick once per frame, before the ring view ticks', () => {
+    expect(hud).toContain('this.assistActive = this.assistRotationActive();');
+    expect(hud).toContain(
+      'this.assistPickId = this.assistActive ? this.resolveAssistPick(abPlayer) : null;',
+    );
+    // Order matters: the descriptor's slot-0 closures read both fields DURING
+    // tick(), so a paint that resolved them afterwards would paint last frame's
+    // pick. Pin the two assignments as preceding the paint call.
+    expect(hud).toMatch(
+      /this\.assistPickId = this\.assistActive \? this\.resolveAssistPick\(abPlayer\) : null;[\s\S]*?this\.mobileActionRingPainter\.paint\(/,
+    );
+  });
+
+  it('passes the live assist state into the mobile ring painter', () => {
+    expect(hud).toMatch(
+      /this\.mobileActionRingPainter\.paint\([\s\S]*?this\.assistActive,\n\s*\);/,
+    );
+  });
+
+  it('routes the primary-seat tap through the Assist resolver only while Assist is on', () => {
+    expect(hud).toContain('if (this.assistRotationActive()) {');
+    // `false`, not a measured duration: a TAP is never the stop-attacking hold.
+    // Passing a duration here is exactly the defect that made the seat swallow
+    // roughly every other cast in a fight (assist_tap_core.ts header).
+    expect(hud).toContain('this.handleAssistTap(false);');
+    // The classic path must still be reachable below the assist branch.
+    expect(hud).toContain('handleMobileAttackTap(');
+  });
+
+  it('binds the stop-attacking gesture as a TIMER-fired hold on the primary seat', () => {
+    // The hold must reach the binding as a TouchHoldSpec (fired while the finger is
+    // still down), never be re-derived from a duration at release.
+    expect(hud).toContain(
+      '{ holdMs: ASSIST_STOP_ATTACK_HOLD_MS, onHold: () => this.handleAssistHold() }',
+    );
+    // And the hold path must decline the press while Assist is off, so the classic
+    // Attack toggle keeps its ordinary tap.
+    expect(hud).toContain('if (!this.assistRotationActive()) return false;');
+  });
+
+  it('CONSUMES the press whenever the Assist hold acted, so one press never fires twice', () => {
+    // A hold while NOT swinging falls through and casts (assist_tap_core rule 1).
+    // If handleAssistHold reported that as "not consumed", the pointerup would run
+    // the resolver a second time and the press would cast twice: a real double spend
+    // on an on-next-swing or cooldown ability, not a repeat the GCD absorbs. So the
+    // hold must not gate its return value on which branch the resolver took.
+    const body = hud.slice(hud.indexOf('private handleAssistHold()'));
+    const holdBody = body.slice(0, body.indexOf('\n  private ', 1));
+    expect(holdBody).toContain('this.handleAssistTap(true);');
+    expect(holdBody).toContain('return true;');
+    // The one and only `return false` in it is the Assist-off decline above.
+    expect(holdBody.match(/return false;/g) ?? []).toHaveLength(1);
+    // And handleAssistTap must not hand back an outcome for the hold to branch on.
+    expect(hud).toContain('private handleAssistTap(stopAttackHold: boolean): void {');
+  });
+
+  it('derives the primary seat as an ability slot only while Assist owns it', () => {
+    expect(hud).toContain('isAttack: () => !this.assistActive,');
+    expect(hud).toContain(
+      'ability: () => (this.assistActive ? this.assistAbilityFor(this.assistPickId) : null),',
     );
   });
 

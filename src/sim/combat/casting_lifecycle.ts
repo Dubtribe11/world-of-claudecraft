@@ -60,6 +60,7 @@ import {
   normAngle,
 } from '../types';
 import { drawWeapon } from '../weapon_stow';
+import { assistedGcd } from './assist_gcd';
 import {
   hasUnbreakableMovementLock,
   isInStasis,
@@ -574,12 +575,25 @@ function vanishedLowBlowFallbackTarget(
   return nearest;
 }
 
+/** Extra intent about HOW a cast was requested, orthogonal to what is cast. */
+export interface CastIntent {
+  /**
+   * The press came from the mobile Assist button (an evaluated rotation step)
+   * rather than the player choosing this ability. Only effect: the global
+   * cooldown it arms carries the assist tax (`combat/assist_gcd.ts`). Every gate,
+   * cost, cooldown and target rule below is untouched, so an assisted cast can
+   * never succeed where a manual press would fail.
+   */
+  assisted?: boolean;
+}
+
 export function castAbility(
   ctx: SimContext,
   abilityId: string,
   pid?: number,
   aim?: { x: number; z: number },
   castTargetId: number | null = null,
+  intent?: CastIntent,
 ): void {
   const r = ctx.resolve(pid);
   if (!r) return;
@@ -998,7 +1012,13 @@ export function castAbility(
   // so gear/Bloodlust/Temporal Acceleration haste speeds the whole rotation, not just
   // cast bars. spellHasteMult is 1 for anyone without spell haste, so their GCD is
   // unchanged.
-  const gcd = Math.max(MIN_GCD, ctx.playerGcdFor(meta.cls) / spellHasteMult(p));
+  // The assist tax lands AFTER the class GCD, haste and the MIN_GCD floor, so an
+  // assisted rotation still benefits from haste proportionally and can only ever
+  // come out LONGER than the manual value (combat/assist_gcd.ts).
+  const gcd = assistedGcd(
+    Math.max(MIN_GCD, ctx.playerGcdFor(meta.cls) / spellHasteMult(p)),
+    intent?.assisted === true,
+  );
   // A channel keeps its duration, so it must not eat a next_cast_instant charge.
   const castTime =
     !ability.channel &&

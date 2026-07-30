@@ -787,6 +787,7 @@ export const id_ID: EnTranslations = {
       "actionPageIndicator": "Hal. {page}",
       "targetCycle": "Tukar sasaran",
       "targetCycleShort": "Target",
+      "assistLabel": "Assist",
       "spellbookPageLabel": "Halaman {page}",
       "hideKeyboard": "Sembunyikan papan ketik",
       "chatPlaceholder": "Katakan sesuatu..."
@@ -1062,6 +1063,9 @@ export const id_ID: EnTranslations = {
       "walkByAutoloot": "Jarah Otomatis Sambil Lewat",
       "groundReticle": "Retikel bidik darat",
       "mouseoverCast": "Rapal Saat Menyorot Bingkai Kelompok",
+      "mobileAssistRotation": "Assist Button (Touch)",
+      "mobileAssistRotationNote": "On touch controls, the big ring button casts the next ability in your class rotation and starts your swings. Press and hold it to stop attacking.",
+      "mobileAssistRotationGcdNote": "Casts fired by the Assist button leave a longer global cooldown than pressing the ability yourself, so the rotation runs a little slower than playing it by hand.",
       "stickyTarget": "Pertahankan Sasaran Saat Klik Tanah",
       "showItemLevel": "Tampilkan Level Item",
       "itemLevelLine": "Level Item {level}",

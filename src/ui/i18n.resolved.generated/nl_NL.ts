@@ -787,6 +787,7 @@ export const nl_NL: EnTranslations = {
       "actionPageIndicator": "Pag. {page}",
       "targetCycle": "Wissel van doel",
       "targetCycleShort": "Doel",
+      "assistLabel": "Assist",
       "spellbookPageLabel": "Pagina {page}",
       "hideKeyboard": "Toetsenbord verbergen",
       "chatPlaceholder": "Zeg iets..."
@@ -1062,6 +1063,9 @@ export const nl_NL: EnTranslations = {
       "walkByAutoloot": "Buit oprapen in het voorbijgaan",
       "groundReticle": "Grondrichtkruis",
       "mouseoverCast": "Mouseover-bezwering op groepsframes",
+      "mobileAssistRotation": "Assist Button (Touch)",
+      "mobileAssistRotationNote": "On touch controls, the big ring button casts the next ability in your class rotation and starts your swings. Press and hold it to stop attacking.",
+      "mobileAssistRotationGcdNote": "Casts fired by the Assist button leave a longer global cooldown than pressing the ability yourself, so the rotation runs a little slower than playing it by hand.",
       "stickyTarget": "Doel behouden bij klikken op de grond",
       "showItemLevel": "Itemniveau tonen",
       "itemLevelLine": "Itemniveau {level}",

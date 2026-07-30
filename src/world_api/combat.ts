@@ -26,6 +26,13 @@ export interface IWorldCombat {
   activeFrostRings: ActiveFrostRing[];
   activeTemporalHourglasses: ActiveTemporalHourglass[];
   castAbility(abilityId: string): void;
+  // The mobile Assist button's cast: an evaluated rotation step rather than an
+  // ability the player picked. Identical to castAbility in every gate and in the
+  // server's authority over it; the ONLY difference is that the global cooldown it
+  // arms carries the assist tax (sim/combat/assist_gcd.ts), so a hands-off
+  // rotation runs slower than one driven by hand. Its own member (not a flag on
+  // castAbility) so the intent is explicit at the call site and on the wire.
+  castAssistedAbility(abilityId: string): void;
   castAbilityBySlot(slot: number): void;
   // Ground-targeted cast: the ability is aimed at a world point (x, z) the player
   // chose, instead of the current entity target. Cast by ability id (like

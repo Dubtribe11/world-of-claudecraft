@@ -787,6 +787,7 @@ export const en_XA: EnTranslations = {
       "actionPageIndicator": "[{page}]",
       "targetCycle": "[Šŵáþ ţáŕĝéţ]",
       "targetCycleShort": "[Ţáŕĝéţ]",
+      "assistLabel": "[Áššíšţ]",
       "spellbookPageLabel": "[Þáĝé {page}]",
       "hideKeyboard": "[Ĥíðé ķéýƀóáŕð]",
       "chatPlaceholder": "[Šáý šóɱéţĥíñĝ...]"
@@ -1062,6 +1063,9 @@ export const en_XA: EnTranslations = {
       "walkByAutoloot": "[Ŵáļķ-ƀý Áúţóļóóţ]",
       "groundReticle": "[Ĝŕóúñð-Ţáŕĝéţíñĝ Ŕéţíçļé]",
       "mouseoverCast": "[Ɱóúšéóʋéŕ Çášţ óñ Þáŕţý Ƒŕáɱéš]",
+      "mobileAssistRotation": "[Áššíšţ Ɓúţţóñ (Ţóúçĥ)]",
+      "mobileAssistRotationNote": "[Óñ ţóúçĥ çóñţŕóļš, ţĥé ƀíĝ ŕíñĝ ƀúţţóñ çášţš ţĥé ñéẋţ áƀíļíţý íñ ýóúŕ çļášš ŕóţáţíóñ áñð šţáŕţš ýóúŕ šŵíñĝš. Þŕéšš áñð ĥóļð íţ ţó šţóþ áţţáçķíñĝ.]",
+      "mobileAssistRotationGcdNote": "[Çášţš ƒíŕéð ƀý ţĥé Áššíšţ ƀúţţóñ ļéáʋé á ļóñĝéŕ ĝļóƀáļ çóóļðóŵñ ţĥáñ þŕéššíñĝ ţĥé áƀíļíţý ýóúŕšéļƒ, šó ţĥé ŕóţáţíóñ ŕúñš á ļíţţļé šļóŵéŕ ţĥáñ þļáýíñĝ íţ ƀý ĥáñð.]",
       "stickyTarget": "[Ķééþ Ţáŕĝéţ óñ Ĝŕóúñð Çļíçķ]",
       "showItemLevel": "[Šĥóŵ Íţéɱ Ļéʋéļ]",
       "itemLevelLine": "[Íţéɱ Ļéʋéļ {level}]",

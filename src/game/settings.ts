@@ -203,6 +203,13 @@ export const BOOL_SETTINGS = {
   // casts it on the hovered member without touching the current target (read
   // live by Hud.castSlot). Off restores the classic target-else-self routing.
   mouseoverCast: { def: true },
+  // off by default: the touch action ring's primary (biggest) button becomes a
+  // one-tap Assist button instead of the Attack toggle. Each press casts the next
+  // ability in the class priority list (src/sim/content/rotations.ts, evaluated by
+  // ui/hud/action_bar/assist_rotation_core.ts) and engages white swings; holding
+  // it stops attacking. Opt-in because it replaces a classic control, and touch
+  // only: the desktop bar already has every ability on a key.
+  mobileAssistRotation: { def: false },
   // Party/raid frame display profile. Health is always visible; these switches
   // choose the supporting information layered around it.
   partyFrameShowResource: { def: true },

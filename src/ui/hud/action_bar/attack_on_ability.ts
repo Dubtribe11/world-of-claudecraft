@@ -124,7 +124,9 @@ const EFFECT_CLASS: Record<AbilityEffect['type'], AutoAttackClass> = {
  * (some damaging abilities are requiresTarget:false self/ground AOEs that cast with no
  * hostile target, where an unconditional engage would error).
  */
-export function abilityStartsAutoAttack(effects: AbilityEffect[]): boolean {
+// `readonly` so a caller holding an immutable effect list (the assist evaluator's
+// structural ability input) can pass it without a cast; the body only reads.
+export function abilityStartsAutoAttack(effects: readonly AbilityEffect[]): boolean {
   let damaging = false;
   for (const e of effects) {
     if (e.type === 'aoeRoot' && e.breakOnDamage !== undefined) return false;

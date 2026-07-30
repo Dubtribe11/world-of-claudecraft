@@ -350,6 +350,12 @@ const COMBAT_KEYS = [
   'walkByAutoloot',
   'groundReticle',
   'mouseoverCast',
+  // The touch Assist button plus the note that explains its two gestures (tap
+  // casts the next rotation ability, hold stops attacking): the gestures are not
+  // discoverable from the button itself, so the note is part of the control.
+  'mobileAssistRotation',
+  'note:hudChrome.options.mobileAssistRotationNote',
+  'note:hudChrome.options.mobileAssistRotationGcdNote',
   'stickyTarget',
   'fctScale',
   'showSecondaryActionBar',
@@ -449,10 +455,19 @@ describe('options_view: interface tab taxonomy', () => {
     expect(new Set(union)).toEqual(new Set(all));
     // no setting key appears twice across the whole interface list. This is RED
     // while the showAttackButton duplicate is present and GREEN once deduped.
-    // (the interface list is all keyed controls: no notes / music toggle here)
-    const keys = all.map((c) => ('key' in c ? c.key : ''));
+    // Notes carry no key by design (they are explanatory copy, not a setting), so
+    // they are excluded here and counted separately below; every OTHER control
+    // must be keyed, which is what catches a setting added without a key.
+    const notes = all.filter((c) => c.control === 'note');
+    const keys = all.filter((c) => c.control !== 'note').map((c) => ('key' in c ? c.key : ''));
     expect(keys).not.toContain('');
     expect(new Set(keys).size).toBe(keys.length);
+    // The interface panel carries exactly the notes the tab maps list, so a note
+    // cannot be added or dropped without a diff line here.
+    expect(notes.map((c) => (c.control === 'note' ? c.textKey : ''))).toEqual([
+      'hudChrome.options.mobileAssistRotationNote',
+      'hudChrome.options.mobileAssistRotationGcdNote',
+    ]);
     // showAttackButton in particular resolves to a single combat-tab control
     expect(all.filter((c) => 'key' in c && c.key === 'showAttackButton')).toHaveLength(1);
     expect(find(all, 'showAttackButton')?.category).toBe('combat');

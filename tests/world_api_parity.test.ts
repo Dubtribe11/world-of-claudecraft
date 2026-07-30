@@ -115,6 +115,7 @@ export const IWORLD_MEMBERS = [
   { name: 'castAbilityAt', kind: 'method' },
   { name: 'castAbilityBySlot', kind: 'method' },
   { name: 'castAbilityOn', kind: 'method' },
+  { name: 'castAssistedAbility', kind: 'method' },
   { name: 'releaseEmpoweredAbility', kind: 'method' },
   { name: 'cancelAura', kind: 'method' },
   { name: 'targetEntity', kind: 'method' },
@@ -466,10 +467,11 @@ describe('IWORLD_MEMBERS is the pinned IWorld contract (anti-loosening)', () => 
     // pickRowTalent; rowPicks stays off the seam, rows live on the allocation)
     // plus the release's Card Duel facet, the Professions 2.0 identity
     // surface, the mobile-station pair (placeMobileStation +
-    // activeMobileStationCraft), and the commissions unbindItem command.
-    expect(IWORLD_MEMBERS.length).toBe(256);
+    // activeMobileStationCraft), the commissions unbindItem command, and the
+    // mobile Assist button's castAssistedAbility (the taxed-GCD cast seam).
+    expect(IWORLD_MEMBERS.length).toBe(257);
     expect(DATA_MEMBERS.length).toBe(69);
-    expect(METHOD_MEMBERS.length).toBe(187);
+    expect(METHOD_MEMBERS.length).toBe(188);
   });
   it('has no duplicate member names', () => {
     const names = IWORLD_MEMBERS.map((m) => m.name);
@@ -518,6 +520,7 @@ describe('IWORLD_MEMBERS is the pinned IWorld contract (anti-loosening)', () => 
       'castAbilityAt',
       'castAbilityBySlot',
       'castAbilityOn',
+      'castAssistedAbility',
       'cfg',
       'changeSkin',
       'changeWeaponSkin',
@@ -841,6 +844,7 @@ describe('IWORLD_MEMBERS is the pinned IWorld contract (anti-loosening)', () => 
       'castAbilityAt',
       'castAbilityBySlot',
       'castAbilityOn',
+      'castAssistedAbility',
       'changeSkin',
       'changeWeaponSkin',
       'characterProfile',
@@ -1080,6 +1084,7 @@ const FACET_COMBAT = [
   'castAbilityAt',
   'castAbilityBySlot',
   'castAbilityOn',
+  'castAssistedAbility',
   'releaseEmpoweredAbility',
   'cancelAura',
   'startAutoAttack',
@@ -1518,8 +1523,8 @@ describe('W1: aggregate IWorld member set equals the disjoint union of the 28 fa
 
   it('the union of the facets equals the pinned IWORLD_MEMBERS set', () => {
     const union = Object.values(FACET_MEMBER_ARRAYS).flatMap((arr) => [...arr]);
-    expect(union.length, 'union size before dedup (catches a duplicated member)').toBe(256);
-    expect(new Set(union).size, 'union size after dedup (catches a duplicated member)').toBe(256);
+    expect(union.length, 'union size before dedup (catches a duplicated member)').toBe(257);
+    expect(new Set(union).size, 'union size after dedup (catches a duplicated member)').toBe(257);
     const sortedUnion = [...union].sort();
     const pinned = IWORLD_MEMBERS.map((m) => m.name).sort();
     expect(sortedUnion).toEqual(pinned);

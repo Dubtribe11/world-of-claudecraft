@@ -3436,6 +3436,141 @@ export const TARGETS = [
       return { clip: '#bags' };
     },
   },
+  {
+    key: 'mobile-assist-button',
+    label: 'Touch action ring: the Assist (one-tap rotation) primary button',
+    when: ['assist_rotation_core', 'assist_tap_core', 'content/rotations', 'mobileAssistRotation'],
+    // Mobile only, and landscape: this seat only exists on the touch layout. Both
+    // variants shoot the SAME ring so a reviewer can see the seat before and after
+    // it becomes the assist: 'off' is the classic Attack toggle (which is also what
+    // the BEFORE capture on the base branch produces for the 'on' variant, since
+    // the setting does not exist there), 'on' shows the rotation icon and accent.
+    variants: [
+      { key: 'off', charClass: 'warrior', charName: 'Thorgar', mobile: true, assist: false },
+      { key: 'on', charClass: 'warrior', charName: 'Thorgar', mobile: true, assist: true },
+      // The setting itself, where a player finds it: Options > Interface > Combat.
+      {
+        key: 'setting',
+        charClass: 'warrior',
+        charName: 'Thorgar',
+        mobile: true,
+        assist: false,
+        showSetting: true,
+      },
+    ],
+    async capture(page, variant) {
+      await page.evaluate(() => {
+        document.querySelector('.camera-prompt-confirm')?.click();
+        document.querySelector('.tut-skip')?.click();
+        document.querySelector('.gpu-notice-dismiss')?.click();
+        document.querySelector('#gpu-notice')?.remove();
+      });
+      await wait(300);
+      const setup = await page.evaluate((shot) => {
+        const game = window.__game;
+        const sim = game?.sim;
+        const player = sim?.player;
+        if (!sim || !player) return { ok: false, reason: 'offline world unavailable' };
+        sim.setPlayerLevel?.(20, player.id);
+        player.resource = player.maxResource;
+        // Spawn a target and select it, so the ring paints the engaged state the
+        // assist is actually read in (an out-of-range or targetless seat would
+        // show the dimmed fallback instead of the live pick).
+        const dummyId = sim.addPlayer?.('mage', 'Dummy');
+        const dummy = dummyId === undefined ? null : sim.entities.get(dummyId);
+        if (dummy) {
+          dummy.hostile = true;
+          dummy.pos.x = player.pos.x + 2;
+          dummy.pos.z = player.pos.z;
+          player.targetId = dummy.id;
+        }
+        // The setting is the whole feature gate. Written through the same Settings
+        // object the options window drives, so the HUD picks it up next frame.
+        // Guarded because this target is ALSO run against the base build for the
+        // before/after pair, where the key does not exist yet and Settings.get/set
+        // throw on it: there, `applied` stays false, which is the correct BEFORE
+        // state for the 'off' shot and a clear failure for the 'on' one.
+        let applied = false;
+        try {
+          const settings = game.hud.optionsHooks?.settings;
+          if (settings) {
+            if (settings.get('mobileAssistRotation') !== shot.assist) {
+              settings.set('mobileAssistRotation', shot.assist);
+            }
+            applied = settings.get('mobileAssistRotation') === shot.assist;
+          }
+        } catch {
+          applied = false;
+        }
+        return { ok: true, assist: shot.assist, applied };
+      }, variant);
+      if (!setup.ok) throw new Error(setup.reason);
+      if (variant.assist && !setup.applied) {
+        throw new Error(
+          'settings.mobileAssistRotation is absent on this build, so the Assist seat cannot be shown (expected when capturing the BEFORE pair against the base branch)',
+        );
+      }
+      await wait(700);
+      if (variant.showSetting) {
+        // Route to Options > Interface (the fourth main-menu button offline, as the
+        // interface-options-tabs target documents), then the Combat tab that holds
+        // the toggle and its explanatory note.
+        await page.evaluate(() => {
+          const hud = window.__game?.hud;
+          if (!hud) return;
+          const win = document.querySelector('#options-menu');
+          if (win && getComputedStyle(win).display !== 'none') hud.toggleOptionsMenu();
+          hud.toggleOptionsMenu();
+          const buttons = Array.from(document.querySelectorAll('#options-menu .opt-btn'));
+          buttons[3]?.click();
+        });
+        if (!(await pollForSize(page, '#options-menu .set-rows'))) {
+          throw new Error('the interface options panel did not open');
+        }
+        const onCombat = await page.evaluate(() => {
+          const tab = Array.from(document.querySelectorAll('#options-menu [role="tab"]')).find(
+            (el) => (el.textContent ?? '').trim().toLowerCase() === 'combat',
+          );
+          if (!tab) return false;
+          tab.click();
+          return true;
+        });
+        if (!onCombat) throw new Error('the Combat tab is missing from the interface panel');
+        await wait(600);
+        const rowVisible = await page.evaluate(() => {
+          const label = Array.from(document.querySelectorAll('#options-menu *')).find((el) =>
+            (el.textContent ?? '').trim().startsWith('Assist Button (Touch)'),
+          );
+          label?.scrollIntoView({ block: 'center' });
+          return !!label;
+        });
+        // On the BASE build the row does not exist yet, and that Combat tab IS the
+        // before half of the pair, so only a build that HAS the setting is required
+        // to show it (setup.applied is the "the key exists here" signal).
+        if (!rowVisible && setup.applied) {
+          throw new Error('the Assist Button row is missing from the Combat tab');
+        }
+        await wait(400);
+        return { clip: '#options-menu' };
+      }
+      const seat = await page.evaluate((shot) => {
+        const btn = document.getElementById('mobile-action-attack');
+        return {
+          present: !!btn,
+          assistClass: !!btn?.classList.contains('assist'),
+          expected: shot.assist,
+          aria: btn?.getAttribute('aria-label') ?? '',
+        };
+      }, variant);
+      if (!seat.present) throw new Error('the mobile action ring primary button is missing');
+      if (seat.assistClass !== seat.expected) {
+        throw new Error(
+          `assist state did not apply: class=${seat.assistClass} expected=${seat.expected} aria="${seat.aria}"`,
+        );
+      }
+      return { clip: '#mobile-action-ring' };
+    },
+  },
 ];
 
 // Grant one staged stack (a plain count, or a specific ItemInstancePayload) and

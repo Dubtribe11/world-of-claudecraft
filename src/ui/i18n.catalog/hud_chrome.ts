@@ -447,6 +447,14 @@ export const hudChromeStrings = {
     // button's 44-60px width, so it stays one word).
     targetCycle: 'Swap target',
     targetCycleShort: 'Target',
+    // Assist button (settings.mobileAssistRotation, off by default): with it on,
+    // the ring's primary button stops being the Attack toggle and becomes the
+    // one-tap rotation button, showing the icon of whichever ability the class
+    // priority list says comes next. This is the SLOT LABEL the shared
+    // action_bar_view core interpolates into abilityUi.actionBar.slotAria, so the
+    // accessible name reads "Action slot Assist: Fireball" and names the ability
+    // that will actually fire.
+    assistLabel: 'Assist',
     // Phase 4: a small touch-only label on each bar-assigned spellbook row,
     // naming which mobile action-ring page (Phase 1) the ability's bar slot
     // falls on. "Page {page}" is not wordy (one word plus a token), so it is
@@ -875,6 +883,17 @@ export const hudChromeStrings = {
     // Interface panel toggle: Clique-style mouseover casting of friendly abilities
     // on the hovered party frame (on by default).
     mouseoverCast: 'Mouseover Cast on Party Frames',
+    // Combat-tab toggle (off by default): turn the touch action ring's primary
+    // button into a one-tap Assist button that casts the next ability in the
+    // class rotation instead of toggling auto-attack. Touch layouts only.
+    mobileAssistRotation: 'Assist Button (Touch)',
+    mobileAssistRotationNote:
+      'On touch controls, the big ring button casts the next ability in your class rotation and starts your swings. Press and hold it to stop attacking.',
+    // The balance note that must ship WITH the toggle: an assisted press arms a
+    // longer global cooldown than a manual one (sim/combat/assist_gcd.ts), so the
+    // player has to be told the trade before opting in, not discover it in a fight.
+    mobileAssistRotationGcdNote:
+      'Casts fired by the Assist button leave a longer global cooldown than pressing the ability yourself, so the rotation runs a little slower than playing it by hand.',
     // Combat-tab toggle (off by default: ground left-clicks clear the target,
     // the classic behavior). On keeps the target on a ground left-click so
     // click-to-move repositioning does not deselect.

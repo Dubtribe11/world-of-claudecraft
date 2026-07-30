@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  BOOL_SETTINGS,
   clickMoveButtonLabel,
   normalizeClickMoveButton,
   SETTING_RANGES,
@@ -374,5 +375,25 @@ describe('click-to-move mouse button setting', () => {
     expect(normalizeClickMoveButton(2)).toBe(2);
     expect(clickMoveButtonLabel(0)).toBe('Left Click');
     expect(clickMoveButtonLabel(2)).toBe('Right Click');
+  });
+});
+
+describe('mobile Assist rotation setting', () => {
+  // The whole promise of the feature is that it changes nothing until a player asks
+  // for it: the touch ring's primary seat stays the classic Attack toggle by
+  // default. A flipped default would silently take that control away from every
+  // existing touch player on the next load, so the default is pinned to the
+  // literal, not to the table's own value.
+  it('is off by default, so the touch ring keeps its Attack toggle', () => {
+    expect(BOOL_SETTINGS.mobileAssistRotation.def).toBe(false);
+    expect(new Settings().get('mobileAssistRotation')).toBe(false);
+  });
+
+  it('persists once a player opts in, and clears on a reset', () => {
+    const s = new Settings();
+    s.set('mobileAssistRotation', true);
+    expect(new Settings().get('mobileAssistRotation')).toBe(true);
+    s.reset();
+    expect(new Settings().get('mobileAssistRotation')).toBe(false);
   });
 });

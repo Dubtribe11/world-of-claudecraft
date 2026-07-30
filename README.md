@@ -282,6 +282,8 @@ Ranked wins and Fiesta takedowns pay **Honor**, which the quartermaster in town 
 
 Every binding is remappable in the keybinds panel. Touch controls (a movement stick, camera drag, and on-screen action buttons) come up automatically on mobile.
 
+Touch players can also turn on **Assist Button** (Options > Interface > Combat, off by default): the action ring's big primary button becomes a one-tap press that casts the next ability in your class rotation and starts your swings, with the icon on its face showing what fires next. Holding it stops attacking. It never spends a defensive cooldown, a heal, or crowd control, and the server validates each cast exactly as it would a manual button press. The rotations are authored per class in `src/sim/content/rotations.ts`; the design and its limits are in `docs/design/mobile-assist-rotation.md`.
+
 ## Architecture (one sim, three hosts)
 
 Three ideas hold the project together:

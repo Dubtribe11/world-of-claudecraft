@@ -3177,6 +3177,19 @@ export class ClientWorld implements IWorld {
     }
     this.cmd({ cmd: 'cast', ability: abilityId });
   }
+  // The mobile Assist button's cast. Rides the existing 'cast' token with an
+  // `assist` marker (the same extra-field pattern as the mouseover-cast `target`
+  // override), so the wire vocabulary is unchanged; the server routes it to
+  // sim.castAssistedAbility, which arms the taxed global cooldown. The flag can
+  // only ever make the caster SLOWER, so a client that omits it gains nothing a
+  // client running its own rotation script would not already have.
+  castAssistedAbility(abilityId: string): void {
+    if (this.deadTargetCast(this.known.find((k) => k.def.id === abilityId)?.def)) {
+      this.eventQueue.push({ type: 'error', text: 'You have no target.', reason: 'target_dead' });
+      return;
+    }
+    this.cmd({ cmd: 'cast', ability: abilityId, assist: 1 });
+  }
   castAbilityBySlot(slot: number): void {
     if (this.deadTargetCast(this.known[slot]?.def)) {
       this.eventQueue.push({ type: 'error', text: 'You have no target.', reason: 'target_dead' });

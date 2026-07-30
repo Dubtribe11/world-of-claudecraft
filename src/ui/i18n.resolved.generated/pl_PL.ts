@@ -787,6 +787,7 @@ export const pl_PL: EnTranslations = {
       "actionPageIndicator": "Str. {page}",
       "targetCycle": "Zmień cel",
       "targetCycleShort": "Cel",
+      "assistLabel": "Assist",
       "spellbookPageLabel": "Strona {page}",
       "hideKeyboard": "Ukryj klawiaturę",
       "chatPlaceholder": "Powiedz coś..."
@@ -1062,6 +1063,9 @@ export const pl_PL: EnTranslations = {
       "walkByAutoloot": "Automatyczny łup w przelocie",
       "groundReticle": "Celownik naziemny",
       "mouseoverCast": "Rzucanie po najechaniu na ramki drużyny",
+      "mobileAssistRotation": "Assist Button (Touch)",
+      "mobileAssistRotationNote": "On touch controls, the big ring button casts the next ability in your class rotation and starts your swings. Press and hold it to stop attacking.",
+      "mobileAssistRotationGcdNote": "Casts fired by the Assist button leave a longer global cooldown than pressing the ability yourself, so the rotation runs a little slower than playing it by hand.",
       "stickyTarget": "Zachowaj cel po kliknięciu w ziemię",
       "showItemLevel": "Pokaż poziom przedmiotu",
       "itemLevelLine": "Poziom przedmiotu {level}",

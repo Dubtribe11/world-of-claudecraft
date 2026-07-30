@@ -28,32 +28,95 @@ interface TapTarget {
   addEventListener(type: string, listener: (e: PointerEvent & MouseEvent) => void): void;
 }
 
+/**
+ * An optional long-press meaning layered on the same button as the tap.
+ *
+ * It fires from a TIMER while the finger is still down, never from a measured
+ * duration at release, and that is the whole contract. Classifying at release
+ * looked equivalent and was not: `pointerup` is dispatched on the main thread, so
+ * a busy 3D frame delivers it hundreds of milliseconds after the finger actually
+ * lifted, and an instant tap then measures as a long press. On the mobile Assist
+ * seat that silently swallowed roughly every other cast in a fight (issue: the
+ * one-tap rotation button "not working"). Firing at the threshold also matches
+ * every other long-press in this tree (the Chat button, touch item drag, the
+ * mobile context menu, pet autocast), all of which are timer-driven.
+ */
+export interface TouchHoldSpec {
+  /** How long the finger must stay down before the hold fires. */
+  holdMs: number;
+  /**
+   * Fired ONCE, at `holdMs`, while the finger is still down. Return true when the
+   * hold CONSUMED the press, so the following `pointerup` does not also fire
+   * `onTap`; return false to leave the press an ordinary tap (what a seat whose
+   * hold meaning is conditional, e.g. only while a setting is on, returns).
+   */
+  onHold(): boolean;
+}
+
 /** Bind `onTap` so it fires for ANY touch pointer (primary or not), plus the
  *  regular click path for mouse and keyboard. Use this instead of a bare
- *  `addEventListener('click', ...)` for every touch-facing HUD button. */
-export function bindTouchTap(el: TapTarget, onTap: (e: Event) => void): void {
+ *  `addEventListener('click', ...)` for every touch-facing HUD button.
+ *
+ *  Pass `hold` to give the same button a long-press meaning; see `TouchHoldSpec`.
+ *  The mouse/keyboard `click` path has no press phase, so it is always a tap. */
+export function bindTouchTap(el: TapTarget, onTap: (e: Event) => void, hold?: TouchHoldSpec): void {
   let downId: number | null = null;
   let downX = 0;
   let downY = 0;
   let suppressClick = false;
+  let holdTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
+  // Set by a hold that reported itself as consuming the press: the pointerup that
+  // ends that press must not also fire the tap.
+  let holdConsumedPress = false;
+  const cancelHold = () => {
+    if (holdTimer !== null) {
+      globalThis.clearTimeout(holdTimer);
+      holdTimer = null;
+    }
+  };
   el.addEventListener('pointerdown', (e) => {
     if (e.pointerType !== 'touch') return;
     downId = e.pointerId;
     downX = e.clientX;
     downY = e.clientY;
+    holdConsumedPress = false;
+    cancelHold();
+    if (hold) {
+      holdTimer = globalThis.setTimeout(() => {
+        holdTimer = null;
+        holdConsumedPress = hold.onHold();
+      }, hold.holdMs);
+    }
   });
   el.addEventListener('pointerup', (e) => {
     if (e.pointerType !== 'touch' || e.pointerId !== downId) return;
     downId = null;
+    cancelHold();
     if (Math.hypot(e.clientX - downX, e.clientY - downY) > TAP_SLOP_PX) return;
     suppressClick = true;
     globalThis.setTimeout(() => {
       suppressClick = false;
     }, CLICK_SUPPRESS_MS);
+    if (holdConsumedPress) {
+      holdConsumedPress = false;
+      return;
+    }
     onTap(e);
   });
+  // A finger that slides off past the slop must not fire a pending hold either:
+  // the pointerup slop check comes too late for a timer. Only bound when a hold
+  // meaning exists, so an ordinary tap button adds no per-move listener.
+  if (hold) {
+    el.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'touch' || e.pointerId !== downId) return;
+      if (Math.hypot(e.clientX - downX, e.clientY - downY) > TAP_SLOP_PX) cancelHold();
+    });
+  }
   el.addEventListener('pointercancel', (e) => {
-    if (e.pointerId === downId) downId = null;
+    if (e.pointerId === downId) {
+      downId = null;
+      cancelHold();
+    }
   });
   el.addEventListener('click', (e) => {
     if (suppressClick) {
