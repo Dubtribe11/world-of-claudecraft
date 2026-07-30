@@ -408,7 +408,12 @@ export class ArenaWindow {
       })
       .join('');
     return (
-      `<div class="arena-season-champ-row"><span class="arena-season-bracket">${esc(row.bracket)}</span>` +
+      // Through bracketLabel like every other bracket in this window, so a
+      // future locale-aware label lands here too instead of leaving one raw
+      // "1v1" behind.
+      `<div class="arena-season-champ-row"><span class="arena-season-bracket">${esc(
+        this.bracketLabel(row.bracket),
+      )}</span>` +
       `<span class="arena-season-champs">${names}</span>` +
       `<span class="lr-rating">${esc(formatNumber(row.rating, { maximumFractionDigits: 0 }))}</span></div>`
     );

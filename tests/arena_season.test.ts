@@ -29,6 +29,10 @@ import {
 import { DEEDS } from '../src/sim/content/deeds';
 import { grantArenaSeasonTitlesForDeeds, setActiveTitle } from '../src/sim/deeds';
 import { type PlayerMeta, Sim } from '../src/sim/sim';
+import type { SimEvent } from '../src/sim/types';
+// The HUD's unlock planner is a pure core, so the presentation each lane earns is
+// asserted from the same function the HUD runs rather than restated here.
+import { buildDeedUnlockPlan } from '../src/ui/deeds_view';
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -40,6 +44,12 @@ function makeSim(): Sim {
 function addChar(sim: Sim, name: string, opts?: { arenaSeasonTitles?: readonly string[] }) {
   const pid = sim.addPlayer('warrior', name, opts);
   return { pid, meta: sim.players.get(pid) as PlayerMeta, e: sim.entities.get(pid)! };
+}
+
+function deedEvents(evs: SimEvent[]): Extract<SimEvent, { type: 'deedUnlocked' }>[] {
+  return evs.filter((ev): ev is Extract<SimEvent, { type: 'deedUnlocked' }> => {
+    return ev.type === 'deedUnlocked';
+  });
 }
 
 describe('the season calendar', () => {
@@ -192,11 +202,13 @@ describe('the host award lane', () => {
     const earnDay = meta.deedsEarned.get(SEASON_1);
     // A replay grants nothing AND does not restamp the original earn day, which
     // is what the Renown board's completion-time tie-break reads.
-    expect(grantArenaSeasonTitlesForDeeds(sim.ctx, meta, [SEASON_1, SEASON_1])).toBe(0);
+    expect(
+      grantArenaSeasonTitlesForDeeds(sim.ctx, meta, [SEASON_1, SEASON_1], { retro: true }),
+    ).toBe(0);
     expect(meta.deedsEarned.size).toBe(earnedAfterJoin);
     expect(meta.deedsEarned.get(SEASON_1)).toBe(earnDay);
     // A SECOND season, however, still lands through the same call.
-    expect(grantArenaSeasonTitlesForDeeds(sim.ctx, meta, [SEASON_2])).toBe(1);
+    expect(grantArenaSeasonTitlesForDeeds(sim.ctx, meta, [SEASON_2], { retro: true })).toBe(1);
     expect(meta.deedsEarned.size).toBe(earnedAfterJoin + 1);
   });
 
@@ -230,14 +242,62 @@ describe('the host award lane', () => {
     expect(sim.grantArenaSeasonTitles(9999, [SEASON_2])).toBe(0);
   });
 
+  // The two lanes share one grant helper and want OPPOSITE presentations, so the
+  // retro flag is asserted per lane, plus the consequence it decides: the plan
+  // core the HUD runs (buildDeedUnlockPlan) and the server's marquee broadcast
+  // gate (`ev.retro !== true` in game.ts) both read exactly this flag.
+  it('flags the join replay retro, so a login is a back-credit and never re-celebrates', () => {
+    const sim = makeSim();
+    const { pid } = addChar(sim, 'Champ', { arenaSeasonTitles: [SEASON_1] });
+    const ev = deedEvents(sim.tick()).find((e) => e.deedId === SEASON_1);
+    expect(ev?.pid).toBe(pid);
+    expect(ev?.retro).toBe(true);
+    // Quiet by construction: one summary count, no banner, no sound, and (retro)
+    // no guild or follower broadcast.
+    const plan = buildDeedUnlockPlan([{ deedId: SEASON_1, retro: ev?.retro }], DEEDS);
+    expect(plan).toEqual({
+      logIds: [],
+      bannerId: null,
+      titleHintIds: [],
+      retroCount: 1,
+      playSound: false,
+    });
+  });
+
+  it('leaves the live in-place grant unflagged, so the champion gets the real moment', () => {
+    const sim = makeSim();
+    const { pid } = addChar(sim, 'Champ');
+    // Drain the join pass first, so the only unlock under inspection is the one
+    // the settlement lane grants to a player already standing in the world.
+    sim.tick();
+    expect(sim.grantArenaSeasonTitles(pid, [SEASON_1])).toBe(1);
+    const ev = deedEvents(sim.tick()).find((e) => e.deedId === SEASON_1);
+    expect(ev?.pid).toBe(pid);
+    // The ABSENCE of the flag is the contract on this arm: the server broadcasts
+    // a marquee unlock only when `retro !== true`, so a truthy-vs-present slip
+    // here is what silences the guild line.
+    expect(ev && 'retro' in ev).toBe(false);
+    expect(ev?.retro).toBeUndefined();
+    // Banner, title hint, and celebration sound, the presentation the join lane
+    // deliberately suppresses.
+    const plan = buildDeedUnlockPlan([{ deedId: SEASON_1, retro: ev?.retro }], DEEDS);
+    expect(plan).toEqual({
+      logIds: [SEASON_1],
+      bannerId: SEASON_1,
+      titleHintIds: [SEASON_1],
+      retroCount: 0,
+      playSound: true,
+    });
+  });
+
   it('grants nothing when the host passes no awards (the offline / unranked case)', () => {
     const sim = makeSim();
     const { meta } = addChar(sim, 'Nobody');
     for (const deedId of ARENA_SEASON_DEED_IDS) {
       expect(meta.deedsEarned.has(deedId), deedId).toBe(false);
     }
-    expect(grantArenaSeasonTitlesForDeeds(sim.ctx, meta, undefined)).toBe(0);
-    expect(grantArenaSeasonTitlesForDeeds(sim.ctx, meta, [])).toBe(0);
+    expect(grantArenaSeasonTitlesForDeeds(sim.ctx, meta, undefined, { retro: true })).toBe(0);
+    expect(grantArenaSeasonTitlesForDeeds(sim.ctx, meta, [], { retro: true })).toBe(0);
   });
 
   it('survives a save and reload with the title still worn', () => {

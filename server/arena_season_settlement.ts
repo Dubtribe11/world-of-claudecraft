@@ -156,12 +156,29 @@ function comparePairNames(x: ArenaSeasonPairCandidate, y: ArenaSeasonPairCandida
  * would settle with zero champions and stamp its exactly-once marker, so the
  * title would be gone permanently and silently.
  *
+ * An UNAUTHORED closed season is skipped rather than held, and that arm is what
+ * keeps the floor from freezing. The settler skips such a season without writing
+ * a marker (`runOnce`), so it stays unsettled forever; holding the floor at it
+ * would pin retention permanently the moment the calendar outruns the roster, and
+ * the entrant and pair rows for every season from there on would grow without
+ * bound. Skipping is safe because an unauthored season can never be ranked at
+ * all: there is no deed to award, so nothing will ever read its rows.
+ *
+ * The trade that buys: authoring a title for an ALREADY-CLOSED season no longer
+ * settles it against real standings, because the rows may be gone by then. That
+ * is the right way round. Retroactively titling a season players fought without
+ * one was never a supported operation, the roster is authored years ahead
+ * precisely so it does not come up, and the settler now says so loudly the first
+ * time it skips one (`runOnce`).
+ *
  * Pure, so the ordering is testable without a database or a clock.
  */
 export function oldestUnsettledArenaSeason(nowMs: number, settled: ReadonlySet<number>): number {
   const lastClosed = lastClosedArenaSeasonAt(nowMs);
   for (let season = 1; season <= lastClosed; season++) {
-    if (!settled.has(season)) return season;
+    if (settled.has(season)) continue;
+    if (!arenaSeasonDef(season)) continue;
+    return season;
   }
   // Nothing outstanding: only the live season's rows are still being written.
   return arenaSeasonIndexAt(nowMs);
@@ -227,8 +244,16 @@ export function createArenaSeasonSettler(deps: ArenaSeasonSettlerDeps): ArenaSea
         if (!arenaSeasonDef(season)) {
           if (!reportedUnauthored.has(season)) {
             reportedUnauthored.add(season);
+            // Loud on purpose, and not benign: the skip writes no marker, so the
+            // season stays unsettled forever, `oldestUnsettledArenaSeason` steps
+            // over it, and the nightly sweep may then prune its entrant and
+            // partner rows. Authoring the title AFTER that point can no longer
+            // rank it. The roster is the fix, and it has to land before the
+            // calendar reaches the season.
             deps.onInfo(
-              `arena season ${season} closed with no authored title (src/sim/content/arena_seasons.ts); skipped`,
+              `arena season ${season} closed with no authored title (src/sim/content/arena_seasons.ts); ` +
+                'skipped permanently, no champion will ever be awarded for it, and its participation ' +
+                'rows are now prunable: extend the roster before the calendar reaches a season',
             );
           }
           continue;

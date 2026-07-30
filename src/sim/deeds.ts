@@ -562,17 +562,32 @@ export function grantDeed(
  * accepted, so a bug (or a compromised host row) can never mint an arbitrary
  * deed, and `grantDeed` makes a replay idempotent. Returns how many were newly
  * granted, which is 0 on every login after the first.
+ *
+ * `opts.retro` is REQUIRED and differs per lane, which is the whole reason it is
+ * a parameter rather than a constant in here: both lanes come through this one
+ * function, and they want opposite presentations.
+ * - `true` from the join replay (`Sim.addPlayer`): the ledger is re-read on every
+ *   login, so a champion must not get a banner, a celebration sound, and a fresh
+ *   guild broadcast every time they log in. They get the quiet
+ *   "N deeds back-credited" summary line, exactly like the rest of the retro pass.
+ * - `false` from the live in-place grant (`Sim.grantArenaSeasonTitles`, driven by
+ *   the settler's `onAwarded`): this is the earned MOMENT for a player who is
+ *   online when their season closes, so it gets the full unlock presentation
+ *   (banner + audio in `Hud.handleDeedUnlocks`) and, because a season feat
+ *   carries a title reward and is therefore marquee, the guild/follower broadcast
+ *   that `server/game.ts` gates on `ev.retro !== true`.
  */
 export function grantArenaSeasonTitlesForDeeds(
   ctx: SimContext,
   meta: PlayerMeta,
   awarded: readonly string[] | undefined,
+  opts: { retro: boolean },
 ): number {
   if (!awarded) return 0;
   let granted = 0;
   for (const deedId of awarded) {
     if (!ARENA_SEASON_DEED_IDS.has(deedId)) continue;
-    if (grantDeed(ctx, meta, deedId, { retro: true })) granted++;
+    if (grantDeed(ctx, meta, deedId, { retro: opts.retro })) granted++;
   }
   return granted;
 }

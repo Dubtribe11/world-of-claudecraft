@@ -28,6 +28,7 @@ import {
   arenaSeasonIndexAt,
   arenaSeasonStartMs,
 } from '../../src/sim/arena_season';
+import { ARENA_SEASON_COUNT, arenaSeasonDef } from '../../src/sim/content/arena_seasons';
 
 const REALM = 'testrealm';
 const DAY = 86_400_000;
@@ -212,6 +213,30 @@ describe('oldestUnsettledArenaSeason (the retention floor)', () => {
     const inSeason5 = arenaSeasonStartMs(5) + DAY;
     expect(oldestUnsettledArenaSeason(inSeason5, new Set([1, 3]))).toBe(2);
     expect(oldestUnsettledArenaSeason(inSeason5, new Set([2, 3, 4]))).toBe(1);
+  });
+
+  it('skips an unauthored closed season instead of pinning the floor there forever', () => {
+    // Once the calendar outruns the authored roster, the settler skips that
+    // season and deliberately writes NO marker (pinned in the driver suite
+    // below), so it is unsettled for good. Holding the floor at it would freeze
+    // retention permanently and let entrant and pair rows grow without bound
+    // from that boundary on, which is the growth story this table has to answer.
+    // Safe to skip because an unauthored season can never be ranked: there is no
+    // deed to award, so nothing will ever read its rows.
+    const pastTheRoster = arenaSeasonStartMs(ARENA_SEASON_COUNT + 3) + DAY;
+    const everyAuthoredSeason = new Set(
+      Array.from({ length: ARENA_SEASON_COUNT }, (_, i) => i + 1),
+    );
+    expect(arenaSeasonDef(ARENA_SEASON_COUNT + 1)).toBeNull();
+    // The floor lands on the live season, so every closed unauthored season's
+    // rows are prunable rather than kept for a settlement that can never come.
+    expect(oldestUnsettledArenaSeason(pastTheRoster, everyAuthoredSeason)).toBe(
+      ARENA_SEASON_COUNT + 3,
+    );
+    // An AUTHORED season still outranks a newer unauthored one: the skip must not
+    // become a blanket "floor at live" once the roster has run out.
+    everyAuthoredSeason.delete(ARENA_SEASON_COUNT);
+    expect(oldestUnsettledArenaSeason(pastTheRoster, everyAuthoredSeason)).toBe(ARENA_SEASON_COUNT);
   });
 
   it('floors at the live season in Preseason and once everything has settled', () => {
