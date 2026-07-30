@@ -4244,6 +4244,7 @@ export const zh_CN: Partial<Record<TranslationKey, string>> = {
   'hudChrome.mobile.nameplates': '姓名板',
   'hudChrome.mobile.targetCycle': '切换目标',
   'hudChrome.mobile.targetCycleShort': '目标',
+  'hudChrome.mobile.assistLabel': '辅助',
   'hudChrome.mobile.toggleHaptics': '切换震动反馈',
   'hudChrome.rest.resting': '休息中',
   'hudChrome.swing.ready': '挥击',
@@ -7887,6 +7888,9 @@ export const zh_CN: Partial<Record<TranslationKey, string>> = {
   'hud.combat.floatingParry': '招架',
   'hud.combat.parried': '{target}招架了你的{ability}。',
   'hudChrome.options.mouseoverCast': '队伍头像上鼠标悬停施法',
+  'hudChrome.options.mobileAssistRotation': '辅助按钮（触屏）',
+  'hudChrome.options.mobileAssistRotationNote':
+    '在触屏操作下，环形大按钮会施放你职业循环中的下一个技能并开始普攻。长按可停止攻击。',
   'hudChrome.options.showTargetOfTarget': '显示目标的目标',
   'hudChrome.options.stickyTarget': '点击地面时保留目标',
   'hudChrome.unitFrame.targetOfTargetLabel': '目标的目标',

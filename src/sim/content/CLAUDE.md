@@ -35,7 +35,13 @@ there first if you need one.
 ## Map (domain-grouped; `ls src/sim/content/` for the live set)
 - **Classes + talents:** `classes.ts` (`CLASSES`, `ABILITIES`, `abilitiesKnownAt`),
   `talents.ts` (framework), `talents_warrior.ts`/`talents_classic.ts` (the authored
-  trees; copy `talents_warrior.ts` as the template for a new one).
+  trees; copy `talents_warrior.ts` as the template for a new one),
+  `rotations.ts` (`ROTATION_PRIORITIES`: the authored single-target damage priority
+  list per class, read by the touch Assist button's client evaluator
+  `src/ui/hud/action_bar/assist_rotation_core.ts`; NOT spread by `data.ts` and read
+  by no sim system, but it lives here because it is authored against the kits in
+  `classes.ts` and must change when one does. Its authoring rules are pinned by
+  `tests/rotations_content.test.ts`; design: `docs/design/mobile-assist-rotation.md`).
 - **Zones + dungeons:** `zone1.ts`/`zone2.ts`/`zone3.ts` (one module per zone;
   `zone1` items live in `items.ts` as `BASE_ITEMS`, `zone2`/`zone3` export their
   own `ZONE{N}_ITEMS`), `temple.ts` (the temple zone + dungeon in one module),

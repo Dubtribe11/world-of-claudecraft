@@ -787,6 +787,7 @@ export const sv_SE: EnTranslations = {
       "actionPageIndicator": "Sida {page}",
       "targetCycle": "Byt mål",
       "targetCycleShort": "Mål",
+      "assistLabel": "Assist",
       "spellbookPageLabel": "Sida {page}",
       "hideKeyboard": "Dölj tangentbordet",
       "chatPlaceholder": "Säg något..."
@@ -1062,6 +1063,8 @@ export const sv_SE: EnTranslations = {
       "walkByAutoloot": "Automatisk plundring i förbifarten",
       "groundReticle": "Markriktmedel",
       "mouseoverCast": "Kasta via muspekaren på gruppramarna",
+      "mobileAssistRotation": "Assist Button (Touch)",
+      "mobileAssistRotationNote": "On touch controls, the big ring button casts the next ability in your class rotation and starts your swings. Long-press it to stop attacking.",
       "stickyTarget": "Behåll mål vid markklick",
       "showItemLevel": "Visa föremålsnivå",
       "itemLevelLine": "Föremålsnivå {level}",

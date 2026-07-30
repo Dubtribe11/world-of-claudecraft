@@ -4,6 +4,8 @@ export * from './action_bar_layout_core';
 export * from './action_bar_painter';
 export * from './action_bar_view';
 export * from './action_bar_visibility_core';
+export * from './assist_rotation_core';
+export * from './assist_tap_core';
 export * from './attack_on_ability';
 export * from './consumable_bar_view';
 export * from './ground_aim';

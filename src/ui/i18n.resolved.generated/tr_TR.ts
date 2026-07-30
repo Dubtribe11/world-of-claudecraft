@@ -787,6 +787,7 @@ export const tr_TR: EnTranslations = {
       "actionPageIndicator": "Sayfa {page}",
       "targetCycle": "Hedefi değiştir",
       "targetCycleShort": "Hedef",
+      "assistLabel": "Assist",
       "spellbookPageLabel": "Sayfa {page}",
       "hideKeyboard": "Klavyeyi gizle",
       "chatPlaceholder": "Bir şey söyle..."
@@ -1062,6 +1063,8 @@ export const tr_TR: EnTranslations = {
       "walkByAutoloot": "Yanından Geçerken Otomatik Yağma",
       "groundReticle": "Yer hedefleme halkası",
       "mouseoverCast": "Grup Çerçevelerinde İmleçle Büyü Yapma",
+      "mobileAssistRotation": "Assist Button (Touch)",
+      "mobileAssistRotationNote": "On touch controls, the big ring button casts the next ability in your class rotation and starts your swings. Long-press it to stop attacking.",
       "stickyTarget": "Yere Tıklayınca Hedefi Koru",
       "showItemLevel": "Eşya Seviyesini Göster",
       "itemLevelLine": "Eşya Seviyesi {level}",

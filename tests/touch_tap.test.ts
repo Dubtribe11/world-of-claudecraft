@@ -105,6 +105,64 @@ describe('bindTouchTap', () => {
     expect(cb).toHaveBeenCalledTimes(1);
   });
 
+  // The hold duration the tap reports. This is the PRODUCER half of the mobile
+  // Assist button's long-press-to-stop-attacking gesture; assist_tap_core.test.ts
+  // covers the CONSUMER predicate. Without a case here, the two halves could
+  // drift apart with both suites still green and the gesture silently dead.
+  it('reports how long the finger was held, measured across the press', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-30T00:00:00Z'));
+    const el = fakeButton();
+    const cb = vi.fn();
+    bindTouchTap(el, cb);
+    el.dispatch('pointerdown', touch(3));
+    vi.advanceTimersByTime(500);
+    el.dispatch('pointerup', touch(3));
+    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb.mock.calls[0][1]).toBe(500);
+    vi.useRealTimers();
+  });
+
+  it('reports a quick tap as a short hold, not as a long press', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-30T00:00:00Z'));
+    const el = fakeButton();
+    const cb = vi.fn();
+    bindTouchTap(el, cb);
+    el.dispatch('pointerdown', touch(4));
+    vi.advanceTimersByTime(30);
+    el.dispatch('pointerup', touch(4));
+    expect(cb.mock.calls[0][1]).toBe(30);
+    vi.useRealTimers();
+  });
+
+  it('reports zero hold on the mouse/keyboard click path, which has no press phase', () => {
+    const el = fakeButton();
+    const cb = vi.fn();
+    bindTouchTap(el, cb);
+    el.dispatch('click', {});
+    expect(cb).toHaveBeenCalledTimes(1);
+    // Not undefined: a consumer comparing it against a threshold must get a
+    // number, or every keyboard activation would read as NaN and never match.
+    expect(cb.mock.calls[0][1]).toBe(0);
+  });
+
+  it('never reports a negative hold, even if the clock jumps backwards', () => {
+    // A backwards system-clock adjustment between pointerdown and pointerup
+    // would otherwise yield a negative duration, which a `>= threshold` consumer
+    // reads as "not a long press" but a `< 0` guard elsewhere might not expect.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-30T00:00:10Z'));
+    const el = fakeButton();
+    const cb = vi.fn();
+    bindTouchTap(el, cb);
+    el.dispatch('pointerdown', touch(5));
+    vi.setSystemTime(new Date('2026-07-30T00:00:00Z'));
+    el.dispatch('pointerup', touch(5));
+    expect(cb.mock.calls[0][1]).toBe(0);
+    vi.useRealTimers();
+  });
+
   it('mouse pointerdown/up alone does not fire (click handles mouse)', () => {
     const el = fakeButton();
     const cb = vi.fn();

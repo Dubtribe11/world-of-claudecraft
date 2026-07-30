@@ -787,6 +787,7 @@ export const ru_RU: EnTranslations = {
       "actionPageIndicator": "Стр. {page}",
       "targetCycle": "Сменить цель",
       "targetCycleShort": "Цель",
+      "assistLabel": "Помощь",
       "spellbookPageLabel": "Страница {page}",
       "hideKeyboard": "Скрыть клавиатуру",
       "chatPlaceholder": "Напишите сообщение..."
@@ -1062,6 +1063,8 @@ export const ru_RU: EnTranslations = {
       "walkByAutoloot": "Автосбор добычи при проходе",
       "groundReticle": "Прицел наземного наведения",
       "mouseoverCast": "Применение по наведению на рамки группы",
+      "mobileAssistRotation": "Кнопка помощи (касание)",
+      "mobileAssistRotationNote": "При сенсорном управлении большая кнопка круга применяет следующую способность ротации вашего класса и начинает автоатаку. Удерживайте её, чтобы прекратить атаку.",
       "stickyTarget": "Сохранять цель при клике по земле",
       "showItemLevel": "Показывать уровень предмета",
       "itemLevelLine": "Уровень предмета {level}",

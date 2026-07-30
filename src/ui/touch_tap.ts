@@ -30,17 +30,25 @@ interface TapTarget {
 
 /** Bind `onTap` so it fires for ANY touch pointer (primary or not), plus the
  *  regular click path for mouse and keyboard. Use this instead of a bare
- *  `addEventListener('click', ...)` for every touch-facing HUD button. */
-export function bindTouchTap(el: TapTarget, onTap: (e: Event) => void): void {
+ *  `addEventListener('click', ...)` for every touch-facing HUD button.
+ *
+ *  `heldMs` is how long the finger was down before the tap resolved, so a caller
+ *  that wants a long-press meaning (the mobile Assist button's stop-attacking
+ *  hold) can read it without binding its own pointer listeners. It is 0 on the
+ *  mouse/keyboard `click` path, which has no hold phase: those activations are
+ *  always plain taps. */
+export function bindTouchTap(el: TapTarget, onTap: (e: Event, heldMs: number) => void): void {
   let downId: number | null = null;
   let downX = 0;
   let downY = 0;
+  let downAt = 0;
   let suppressClick = false;
   el.addEventListener('pointerdown', (e) => {
     if (e.pointerType !== 'touch') return;
     downId = e.pointerId;
     downX = e.clientX;
     downY = e.clientY;
+    downAt = Date.now();
   });
   el.addEventListener('pointerup', (e) => {
     if (e.pointerType !== 'touch' || e.pointerId !== downId) return;
@@ -50,7 +58,7 @@ export function bindTouchTap(el: TapTarget, onTap: (e: Event) => void): void {
     globalThis.setTimeout(() => {
       suppressClick = false;
     }, CLICK_SUPPRESS_MS);
-    onTap(e);
+    onTap(e, Math.max(0, Date.now() - downAt));
   });
   el.addEventListener('pointercancel', (e) => {
     if (e.pointerId === downId) downId = null;
@@ -61,7 +69,7 @@ export function bindTouchTap(el: TapTarget, onTap: (e: Event) => void): void {
       e.preventDefault();
       return;
     }
-    onTap(e);
+    onTap(e, 0);
   });
 }
 

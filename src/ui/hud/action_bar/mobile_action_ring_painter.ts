@@ -19,6 +19,12 @@ import { mobileButtonHasSourceSlot } from './mobile_action_page_view';
 const ARIA_LABEL_ATTR = 'aria-label';
 const PAGE_INDICATOR_KEY: TranslationKey = 'hudChrome.mobile.actionPageIndicator';
 const PAGE_TOGGLE_ARIA_KEY: TranslationKey = 'hudChrome.mobile.actionPageToggle';
+// Primary-seat state class for the opt-in Assist button (the ring's biggest
+// button stops being the Attack toggle and shows the next rotation ability).
+// The class is what lets hud.mobile.css swap the seat's presentation: hide the
+// static data-icon="attack" glyph the markup ships (an ability icon is painted
+// on the .icon-label underneath it) and switch the accent to the assist gold.
+const CLASS_ASSIST = 'assist';
 
 /** The ring's paint descriptor: the 6-button descriptor ActionBarPainter already
  *  understands, plus the page toggle's own element and the current page/count
@@ -56,6 +62,7 @@ export class MobileActionRingPainter {
     pageCount: number,
     totalSourceSlotsOrShowAttackButton: number | boolean | undefined = undefined,
     showAttackButton = true,
+    assistActive = false,
   ): void {
     const totalSourceSlots =
       typeof totalSourceSlotsOrShowAttackButton === 'number'
@@ -66,6 +73,7 @@ export class MobileActionRingPainter {
         ? totalSourceSlotsOrShowAttackButton
         : showAttackButton;
     this.writers.setDisplay(this.descriptor.bar.slots[0].btn, attackButtonVisible ? '' : 'none');
+    this.writers.toggleClass(this.descriptor.bar.slots[0].btn, CLASS_ASSIST, assistActive);
     this.barPainter.paint(state);
     for (let buttonIndex = 0; buttonIndex < 5; buttonIndex++) {
       this.writers.setDisplay(

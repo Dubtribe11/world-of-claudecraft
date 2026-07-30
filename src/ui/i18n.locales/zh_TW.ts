@@ -4246,6 +4246,7 @@ export const zh_TW: Partial<Record<TranslationKey, string>> = {
   'hudChrome.mobile.nameplates': '名條',
   'hudChrome.mobile.targetCycle': '切換目標',
   'hudChrome.mobile.targetCycleShort': '目標',
+  'hudChrome.mobile.assistLabel': '輔助',
   'hudChrome.mobile.toggleHaptics': '切換觸覺回饋',
   'hudChrome.rest.resting': '休息中',
   'hudChrome.swing.ready': '揮砍',
@@ -7888,6 +7889,9 @@ export const zh_TW: Partial<Record<TranslationKey, string>> = {
   'hud.combat.floatingParry': '招架',
   'hud.combat.parried': '你的{ability}被{target}招架了。',
   'hudChrome.options.mouseoverCast': '對隊伍框架滑鼠指向施法',
+  'hudChrome.options.mobileAssistRotation': '輔助按鈕（觸控）',
+  'hudChrome.options.mobileAssistRotationNote':
+    '在觸控操作下，環形大按鈕會施放你職業循環中的下一個技能並開始普攻。長按可停止攻擊。',
   'hudChrome.options.showTargetOfTarget': '顯示目標的目標',
   'hudChrome.options.stickyTarget': '點擊地面時保留目標',
   'hudChrome.unitFrame.targetOfTargetLabel': '目標的目標',
