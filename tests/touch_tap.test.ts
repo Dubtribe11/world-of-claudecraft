@@ -105,61 +105,134 @@ describe('bindTouchTap', () => {
     expect(cb).toHaveBeenCalledTimes(1);
   });
 
-  // The hold duration the tap reports. This is the PRODUCER half of the mobile
-  // Assist button's long-press-to-stop-attacking gesture; assist_tap_core.test.ts
-  // covers the CONSUMER predicate. Without a case here, the two halves could
-  // drift apart with both suites still green and the gesture silently dead.
-  it('reports how long the finger was held, measured across the press', () => {
+  // The long-press half of the binding. This is the PRODUCER of the mobile Assist
+  // button's stop-attacking gesture; assist_tap_core.test.ts covers the CONSUMER
+  // branch. It fires from a TIMER while the finger is down, deliberately NOT from a
+  // duration measured at release: `pointerup` is dispatched on the main thread, so a
+  // busy 3D frame delivered it hundreds of ms late and an instant tap measured as a
+  // long press, which on the Assist seat swallowed roughly every other cast in a
+  // fight. These cases pin that the mechanism cannot come back.
+  it('fires the hold at the threshold, while the finger is still down', () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-07-30T00:00:00Z'));
     const el = fakeButton();
-    const cb = vi.fn();
-    bindTouchTap(el, cb);
+    const tap = vi.fn();
+    const onHold = vi.fn(() => true);
+    bindTouchTap(el, tap, { holdMs: 700, onHold });
+    el.dispatch('pointerdown', touch(1));
+    vi.advanceTimersByTime(699);
+    expect(onHold).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(onHold).toHaveBeenCalledTimes(1);
+    // The press it consumed does not ALSO tap when the finger lifts.
+    el.dispatch('pointerup', touch(1));
+    expect(tap).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('a tap NEVER fires the hold, however late its pointerup is dispatched', () => {
+    // The regression: a jank-delayed pointerup used to be measured as a long press.
+    // The finger is genuinely up here (the timer was cancelled), so no amount of
+    // subsequent delay may turn the tap into a hold.
+    vi.useFakeTimers();
+    const el = fakeButton();
+    const tap = vi.fn();
+    const onHold = vi.fn(() => true);
+    bindTouchTap(el, tap, { holdMs: 700, onHold });
+    el.dispatch('pointerdown', touch(2));
+    vi.advanceTimersByTime(40);
+    el.dispatch('pointerup', touch(2));
+    vi.advanceTimersByTime(5_000);
+    expect(onHold).not.toHaveBeenCalled();
+    expect(tap).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it('a hold that declines the press leaves it an ordinary tap', () => {
+    // What the Assist seat returns while its setting is OFF: the seat is the classic
+    // Attack toggle then and owns no hold meaning, so the release must still tap.
+    vi.useFakeTimers();
+    const el = fakeButton();
+    const tap = vi.fn();
+    const onHold = vi.fn(() => false);
+    bindTouchTap(el, tap, { holdMs: 700, onHold });
     el.dispatch('pointerdown', touch(3));
-    vi.advanceTimersByTime(500);
+    vi.advanceTimersByTime(900);
     el.dispatch('pointerup', touch(3));
-    expect(cb).toHaveBeenCalledTimes(1);
-    expect(cb.mock.calls[0][1]).toBe(500);
+    expect(onHold).toHaveBeenCalledTimes(1);
+    expect(tap).toHaveBeenCalledTimes(1);
     vi.useRealTimers();
   });
 
-  it('reports a quick tap as a short hold, not as a long press', () => {
+  it('fires the hold once per press, and re-arms for the next press', () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-07-30T00:00:00Z'));
     const el = fakeButton();
-    const cb = vi.fn();
-    bindTouchTap(el, cb);
+    const tap = vi.fn();
+    const onHold = vi.fn(() => true);
+    bindTouchTap(el, tap, { holdMs: 700, onHold });
     el.dispatch('pointerdown', touch(4));
-    vi.advanceTimersByTime(30);
+    vi.advanceTimersByTime(3_000); // still held long past the threshold
+    expect(onHold).toHaveBeenCalledTimes(1);
     el.dispatch('pointerup', touch(4));
-    expect(cb.mock.calls[0][1]).toBe(30);
+    // A fresh press taps normally: the consumed flag must not leak forward.
+    el.dispatch('pointerdown', touch(5));
+    el.dispatch('pointerup', touch(5));
+    expect(onHold).toHaveBeenCalledTimes(1);
+    expect(tap).toHaveBeenCalledTimes(1);
     vi.useRealTimers();
   });
 
-  it('reports zero hold on the mouse/keyboard click path, which has no press phase', () => {
+  it('cancels a pending hold when the finger slides off past the slop', () => {
+    // The pointerup slop check is too late for a timer, so the move has to cancel.
+    // Otherwise sliding from this button onto the joystick would fire the hold.
+    vi.useFakeTimers();
     const el = fakeButton();
-    const cb = vi.fn();
-    bindTouchTap(el, cb);
-    el.dispatch('click', {});
-    expect(cb).toHaveBeenCalledTimes(1);
-    // Not undefined: a consumer comparing it against a threshold must get a
-    // number, or every keyboard activation would read as NaN and never match.
-    expect(cb.mock.calls[0][1]).toBe(0);
+    const tap = vi.fn();
+    const onHold = vi.fn(() => true);
+    bindTouchTap(el, tap, { holdMs: 700, onHold });
+    el.dispatch('pointerdown', touch(6, 100, 100));
+    el.dispatch('pointermove', touch(6, 100 + TAP_SLOP_PX + 1, 100));
+    vi.advanceTimersByTime(2_000);
+    expect(onHold).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 
-  it('never reports a negative hold, even if the clock jumps backwards', () => {
-    // A backwards system-clock adjustment between pointerdown and pointerup
-    // would otherwise yield a negative duration, which a `>= threshold` consumer
-    // reads as "not a long press" but a `< 0` guard elsewhere might not expect.
+  it('keeps a pending hold alive through jitter inside the slop', () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-07-30T00:00:10Z'));
     const el = fakeButton();
-    const cb = vi.fn();
-    bindTouchTap(el, cb);
-    el.dispatch('pointerdown', touch(5));
-    vi.setSystemTime(new Date('2026-07-30T00:00:00Z'));
-    el.dispatch('pointerup', touch(5));
-    expect(cb.mock.calls[0][1]).toBe(0);
+    const tap = vi.fn();
+    const onHold = vi.fn(() => true);
+    bindTouchTap(el, tap, { holdMs: 700, onHold });
+    el.dispatch('pointerdown', touch(7, 100, 100));
+    el.dispatch('pointermove', touch(7, 100 + TAP_SLOP_PX - 1, 100));
+    vi.advanceTimersByTime(700);
+    expect(onHold).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it('cancels a pending hold on pointercancel (a browser gesture steals the touch)', () => {
+    vi.useFakeTimers();
+    const el = fakeButton();
+    const tap = vi.fn();
+    const onHold = vi.fn(() => true);
+    bindTouchTap(el, tap, { holdMs: 700, onHold });
+    el.dispatch('pointerdown', touch(8));
+    el.dispatch('pointercancel', { pointerId: 8 });
+    vi.advanceTimersByTime(2_000);
+    expect(onHold).not.toHaveBeenCalled();
+    expect(tap).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('never fires a hold for the mouse/keyboard click path (no press phase)', () => {
+    vi.useFakeTimers();
+    const el = fakeButton();
+    const tap = vi.fn();
+    const onHold = vi.fn(() => true);
+    bindTouchTap(el, tap, { holdMs: 700, onHold });
+    el.dispatch('click', {});
+    vi.advanceTimersByTime(2_000);
+    expect(onHold).not.toHaveBeenCalled();
+    expect(tap).toHaveBeenCalledTimes(1);
     vi.useRealTimers();
   });
 

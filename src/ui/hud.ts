@@ -278,7 +278,7 @@ import {
   assistNeedsEnemy,
   pickAssistAbility,
 } from './hud/action_bar/assist_rotation_core';
-import { resolveAssistTap } from './hud/action_bar/assist_tap_core';
+import { ASSIST_STOP_ATTACK_HOLD_MS, resolveAssistTap } from './hud/action_bar/assist_tap_core';
 import {
   abilityStartsAutoAttack,
   deferAutoAttackUntilCastEnd,
@@ -5725,19 +5725,20 @@ export class Hud {
     return this.sim.known.find((k) => k.def.id === abilityId) ?? null;
   }
 
-  /** Cast the assist's pick: an ordinary castAbility (the server validates it
-   *  like any other), plus the white-swing engage and the shared used-flash on
-   *  the ring's primary seat. Assist engages auto-attack for an offensive pick
-   *  regardless of the manual-press "Auto-Attack on Ability Use" setting: that
-   *  setting governs the player's own bar presses, while Assist is an explicitly
-   *  opted-into "handle the rotation for me" control, and white swings are part
-   *  of every class's rotation. A TIMED cast defers the engage to castStop for
-   *  the same reason castSlot does (engaging at cast start pulls the mob before
-   *  any damage exists). */
+  /** Cast the assist's pick: an ordinary cast the server validates like any
+   *  other (through the assisted seam, which taxes only the global cooldown it
+   *  arms: sim/combat/assist_gcd.ts), plus the white-swing engage and the shared
+   *  used-flash on the ring's primary seat. Assist engages auto-attack for an
+   *  offensive pick regardless of the manual-press "Auto-Attack on Ability Use"
+   *  setting: that setting governs the player's own bar presses, while Assist is
+   *  an explicitly opted-into "handle the rotation for me" control, and white
+   *  swings are part of every class's rotation. A TIMED cast defers the engage to
+   *  castStop for the same reason castSlot does (engaging at cast start pulls the
+   *  mob before any damage exists). */
   private castAssistAbility(abilityId: string): void {
     const resolved = this.assistAbilityFor(abilityId);
     if (!resolved) return;
-    this.sim.castAbility(abilityId);
+    this.sim.castAssistedAbility(abilityId);
     const tid = this.sim.player.targetId;
     const target = tid !== null ? (this.sim.entities.get(tid) ?? null) : null;
     if (abilityStartsAutoAttack(resolved.effects) && hasAutoAttackTarget(target)) {
@@ -5747,10 +5748,11 @@ export class Hud {
     this.flashActionSlot(0);
   }
 
-  /** One press of the ring's primary seat while Assist is on. `heldMs` comes
-   *  from bindTouchTap so a hold can mean "stop attacking" (the toggle-off the
-   *  seat would otherwise no longer offer). */
-  private handleAssistTap(heldMs: number): void {
+  /** One press of the ring's primary seat while Assist is on. `stopAttackHold` is
+   *  true only for the binding's TIMER-fired hold (the toggle-off the seat would
+   *  otherwise no longer offer), never for a slow tap: see the header of
+   *  hud/action_bar/assist_tap_core.ts for why that distinction is the whole fix. */
+  private handleAssistTap(stopAttackHold: boolean): void {
     const p = this.sim.player;
     const tid = p.targetId;
     const target = tid !== null ? (this.sim.entities.get(tid) ?? null) : null;
@@ -5764,7 +5766,7 @@ export class Hud {
         needsEnemy: ability !== null ? assistNeedsEnemy(ability) : true,
         hasLiveHostileTarget: !!target && !target.dead && target.hostile,
         autoAttack: p.autoAttack,
-        heldMs,
+        stopAttackHold,
       },
       {
         castAssist: (id) => this.castAssistAbility(id),
@@ -5772,6 +5774,28 @@ export class Hud {
         activateAttack: () => this.activateFixedAttackSlot(),
       },
     );
+  }
+
+  /** The Assist seat's long-press. Fired by the binding's timer while the finger
+   *  is still down, so the player feels it land instead of discovering at release
+   *  that their cast turned into a toggle.
+   *
+   *  Returns whether it CONSUMED the press (see `TouchHoldSpec`). With Assist OFF
+   *  this seat is the classic Attack toggle and owns no hold meaning at all, so it
+   *  declines and the release still fires the ordinary tap. With Assist ON it
+   *  always consumes, whichever branch the resolver took: the hold stops the swings
+   *  while swinging and otherwise falls through and CASTS (assist_tap_core rule 1),
+   *  so letting the release through as well would fire that same press twice, which
+   *  on an on-next-swing or cooldown ability is a real double spend rather than a
+   *  harmless repeat the GCD eats. */
+  private handleAssistHold(): boolean {
+    if (!this.assistRotationActive()) return false;
+    this.handleAssistTap(true);
+    // Acknowledge it on the seat: a press that acted before the finger lifted must
+    // be visible, and touch has no hover state to lean on.
+    audio.click();
+    this.flashActionSlot(0);
+    return true;
   }
 
   private flashActionSlot(barSlot: number): void {
@@ -6202,30 +6226,38 @@ export class Hud {
     // bindTouchTap, not 'click': the browser only synthesizes click for the
     // PRIMARY pointer, so click-bound ring buttons went dead the moment the
     // other thumb held the joystick, which is how combat is actually played.
-    bindTouchTap(attackBtn, (_e, heldMs) => {
-      this.peekGuard.consume();
-      this.hideTooltip();
-      audio.click();
-      // Assist on: this seat is the one-tap rotation button instead of the
-      // Attack toggle (see the Assist region above). Off: the classic path below
-      // is byte-identical to what it always did.
-      if (this.assistRotationActive()) {
-        this.handleAssistTap(heldMs);
+    bindTouchTap(
+      attackBtn,
+      () => {
+        this.peekGuard.consume();
+        this.hideTooltip();
+        audio.click();
+        // Assist on: this seat is the one-tap rotation button instead of the
+        // Attack toggle (see the Assist region above). Off: the classic path below
+        // is byte-identical to what it always did.
+        if (this.assistRotationActive()) {
+          this.handleAssistTap(false);
+          attackBtn.blur();
+          return;
+        }
+        const p = this.sim.player;
+        const target = p.targetId !== null ? this.sim.entities.get(p.targetId) : null;
+        const hasLiveHostileTarget = !!target && !target.dead && target.hostile;
+        handleMobileAttackTap(
+          { autoAttack: p.autoAttack, hasLiveHostileTarget },
+          {
+            activateAttack: () => this.activateFixedAttackSlot(),
+            attackNearest: this.onMobileAttackNearest,
+          },
+        );
         attackBtn.blur();
-        return;
-      }
-      const p = this.sim.player;
-      const target = p.targetId !== null ? this.sim.entities.get(p.targetId) : null;
-      const hasLiveHostileTarget = !!target && !target.dead && target.hostile;
-      handleMobileAttackTap(
-        { autoAttack: p.autoAttack, hasLiveHostileTarget },
-        {
-          activateAttack: () => this.activateFixedAttackSlot(),
-          attackNearest: this.onMobileAttackNearest,
-        },
-      );
-      attackBtn.blur();
-    });
+      },
+      // The Assist seat's stop-attacking long-press. Armed for every press and
+      // decided inside handleAssistHold, which returns false (leaving an ordinary
+      // tap) whenever Assist is off, so the classic Attack toggle keeps behaving
+      // exactly as it always did.
+      { holdMs: ASSIST_STOP_ATTACK_HOLD_MS, onHold: () => this.handleAssistHold() },
+    );
     slotBtns.forEach((btn, i) => {
       this.bindEmpoweredActionHold(btn, () => this.mobileSourceSlotForButton(i));
       bindTouchTap(btn, () => {

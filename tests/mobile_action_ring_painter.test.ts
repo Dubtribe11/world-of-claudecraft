@@ -626,9 +626,39 @@ describe('Hud.buildMobileActionRing wiring (source scan)', () => {
 
   it('routes the primary-seat tap through the Assist resolver only while Assist is on', () => {
     expect(hud).toContain('if (this.assistRotationActive()) {');
-    expect(hud).toContain('this.handleAssistTap(heldMs);');
+    // `false`, not a measured duration: a TAP is never the stop-attacking hold.
+    // Passing a duration here is exactly the defect that made the seat swallow
+    // roughly every other cast in a fight (assist_tap_core.ts header).
+    expect(hud).toContain('this.handleAssistTap(false);');
     // The classic path must still be reachable below the assist branch.
     expect(hud).toContain('handleMobileAttackTap(');
+  });
+
+  it('binds the stop-attacking gesture as a TIMER-fired hold on the primary seat', () => {
+    // The hold must reach the binding as a TouchHoldSpec (fired while the finger is
+    // still down), never be re-derived from a duration at release.
+    expect(hud).toContain(
+      '{ holdMs: ASSIST_STOP_ATTACK_HOLD_MS, onHold: () => this.handleAssistHold() }',
+    );
+    // And the hold path must decline the press while Assist is off, so the classic
+    // Attack toggle keeps its ordinary tap.
+    expect(hud).toContain('if (!this.assistRotationActive()) return false;');
+  });
+
+  it('CONSUMES the press whenever the Assist hold acted, so one press never fires twice', () => {
+    // A hold while NOT swinging falls through and casts (assist_tap_core rule 1).
+    // If handleAssistHold reported that as "not consumed", the pointerup would run
+    // the resolver a second time and the press would cast twice: a real double spend
+    // on an on-next-swing or cooldown ability, not a repeat the GCD absorbs. So the
+    // hold must not gate its return value on which branch the resolver took.
+    const body = hud.slice(hud.indexOf('private handleAssistHold()'));
+    const holdBody = body.slice(0, body.indexOf('\n  private ', 1));
+    expect(holdBody).toContain('this.handleAssistTap(true);');
+    expect(holdBody).toContain('return true;');
+    // The one and only `return false` in it is the Assist-off decline above.
+    expect(holdBody.match(/return false;/g) ?? []).toHaveLength(1);
+    // And handleAssistTap must not hand back an outcome for the hold to branch on.
+    expect(hud).toContain('private handleAssistTap(stopAttackHold: boolean): void {');
   });
 
   it('derives the primary seat as an ability slot only while Assist owns it', () => {

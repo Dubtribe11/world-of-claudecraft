@@ -7,7 +7,6 @@ import {
   ASSIST_STOP_ATTACK_HOLD_MS,
   type AssistTapActions,
   type AssistTapState,
-  isAssistStopAttackHold,
   resolveAssistTap,
 } from '../src/ui/hud/action_bar/assist_tap_core';
 
@@ -31,21 +30,19 @@ function state(overrides: Partial<AssistTapState> = {}): AssistTapState {
     needsEnemy: true,
     hasLiveHostileTarget: true,
     autoAttack: false,
-    heldMs: 0,
+    stopAttackHold: false,
     ...overrides,
   };
 }
 
-describe('isAssistStopAttackHold', () => {
-  it('is the hold threshold, inclusive', () => {
-    expect(isAssistStopAttackHold(ASSIST_STOP_ATTACK_HOLD_MS - 1)).toBe(false);
-    expect(isAssistStopAttackHold(ASSIST_STOP_ATTACK_HOLD_MS)).toBe(true);
-    expect(isAssistStopAttackHold(0)).toBe(false);
-  });
-
-  it('takes an explicit threshold', () => {
-    expect(isAssistStopAttackHold(100, 200)).toBe(false);
-    expect(isAssistStopAttackHold(250, 200)).toBe(true);
+describe('ASSIST_STOP_ATTACK_HOLD_MS', () => {
+  it('is a DELIBERATE press-and-hold, past the mobile context menu long-press', () => {
+    // The regression this pins: the gesture used to sit at 420ms and be classified
+    // from a duration measured at pointerup, so main-thread jank made an instant
+    // tap read as a long press and stopped the player's swings instead of casting.
+    // The binding now fires it from a timer (ui/touch_tap.ts TouchHoldSpec), and
+    // the threshold has to stay clear of any plausible tap for that to be safe.
+    expect(ASSIST_STOP_ATTACK_HOLD_MS).toBeGreaterThan(650);
   });
 });
 
@@ -58,26 +55,32 @@ describe('resolveAssistTap', () => {
     expect(actions.attackNearest).not.toHaveBeenCalled();
   });
 
-  it('stops auto-attack on a long hold while swinging', () => {
+  it('stops auto-attack on the hold while swinging', () => {
     const actions = spies();
-    const outcome = resolveAssistTap(
-      state({ autoAttack: true, heldMs: ASSIST_STOP_ATTACK_HOLD_MS }),
-      actions,
-    );
+    const outcome = resolveAssistTap(state({ autoAttack: true, stopAttackHold: true }), actions);
     expect(outcome).toBe('stopAttack');
     expect(actions.activateAttack).toHaveBeenCalledTimes(1);
     expect(actions.castAssist).not.toHaveBeenCalled();
   });
 
-  it('does not eat a long hold that is not stopping anything', () => {
-    // Not swinging: a slow press is still a press, not a dead zone.
+  it('does not eat the hold when it is not stopping anything', () => {
+    // Not swinging: the hold is still a press, not a dead zone.
     const actions = spies();
-    const outcome = resolveAssistTap(
-      state({ autoAttack: false, heldMs: ASSIST_STOP_ATTACK_HOLD_MS * 3 }),
-      actions,
-    );
+    const outcome = resolveAssistTap(state({ autoAttack: false, stopAttackHold: true }), actions);
     expect(outcome).toBe('cast');
     expect(actions.castAssist).toHaveBeenCalledWith('fireball');
+  });
+
+  it('CASTS a tap taken mid-fight, however sluggish the press felt', () => {
+    // The reported bug, at the core's own layer: with auto-attack on for the whole
+    // fight, a TAP must still cast. Only the timer-fired hold may stop the swings,
+    // so a tap arrives here with stopAttackHold false no matter how long the finger
+    // was actually down, and every combat press casts.
+    const actions = spies();
+    const outcome = resolveAssistTap(state({ autoAttack: true, stopAttackHold: false }), actions);
+    expect(outcome).toBe('cast');
+    expect(actions.castAssist).toHaveBeenCalledWith('fireball');
+    expect(actions.activateAttack).not.toHaveBeenCalled();
   });
 
   it('acquires the nearest enemy when an offensive pick has nothing selected', () => {

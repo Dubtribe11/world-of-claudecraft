@@ -9,20 +9,22 @@
 // target on the cluster, which is exactly what a one-tap rotation wants. With
 // Assist off, nothing here runs and the button stays the classic Attack toggle.
 //
-// The auto-attack toggle is not lost: holding the button stops your swings,
-// reusing the same long-press vocabulary the mobile Chat button already uses.
+// The auto-attack toggle is not lost: pressing and holding the button stops your
+// swings, the same long-press vocabulary the mobile Chat button already uses.
+//
+// THE HOLD IS TIMER-FIRED, NOT MEASURED AT RELEASE (`TouchHoldSpec` in
+// ui/touch_tap.ts owns the timer). Deciding it from a duration read at
+// `pointerup` is what made this button feel broken: main-thread jank delays the
+// event, so an instant tap measured as a long press and, because auto-attack is
+// on for the whole fight, roughly every other combat tap stopped the player's
+// swings instead of casting. The threshold below is therefore a DELIBERATE
+// press-and-hold on the game's hottest button, not a slow-tap boundary.
 
 /** Hold the Assist button at least this long (ms) to stop auto-attacking
- *  instead of casting. Matches the mobile Chat button's long-press feel. */
-export const ASSIST_STOP_ATTACK_HOLD_MS = 420;
-
-/** A press counts as the stop-attacking hold once held this long. */
-export function isAssistStopAttackHold(
-  heldMs: number,
-  threshold = ASSIST_STOP_ATTACK_HOLD_MS,
-): boolean {
-  return heldMs >= threshold;
-}
+ *  instead of casting. Sits past the mobile context menu's long-press (650ms) so
+ *  no tap, however sluggish, can reach it by accident; a rare gesture sharing the
+ *  hottest seat in the game has to be unmistakable. */
+export const ASSIST_STOP_ATTACK_HOLD_MS = 700;
 
 export interface AssistTapState {
   /** The ability the assist would cast, or null when the class priority list
@@ -32,9 +34,11 @@ export interface AssistTapState {
   needsEnemy: boolean;
   hasLiveHostileTarget: boolean;
   autoAttack: boolean;
-  /** How long the press was held. 0 for a mouse click or keyboard activation,
-   *  which have no hold phase. */
-  heldMs: number;
+  /** Whether this press is the stop-attacking HOLD rather than a tap. Decided by
+   *  the binding's timer at `ASSIST_STOP_ATTACK_HOLD_MS`, never by a duration
+   *  measured at release; false for a tap and for every mouse/keyboard
+   *  activation, which have no press phase. */
+  stopAttackHold: boolean;
 }
 
 export interface AssistTapActions {
@@ -54,8 +58,8 @@ export type AssistTapOutcome = 'stopAttack' | 'attackNearest' | 'cast' | 'attack
 /**
  * Resolve one press of the Assist button.
  *
- *   1. A long hold WHILE SWINGING stops auto-attack (the toggle-off the button
- *      would otherwise no longer offer). A long hold while not swinging is not a
+ *   1. The hold WHILE SWINGING stops auto-attack (the toggle-off the button
+ *      would otherwise no longer offer). The hold while not swinging is not a
  *      dead press: it falls through and casts like a tap.
  *   2. With no ability to cast, the press behaves exactly like the classic Attack
  *      button, so Assist never leaves the biggest button on the screen inert.
@@ -68,7 +72,7 @@ export function resolveAssistTap(
   state: AssistTapState,
   actions: AssistTapActions,
 ): AssistTapOutcome {
-  if (state.autoAttack && isAssistStopAttackHold(state.heldMs)) {
+  if (state.autoAttack && state.stopAttackHold) {
     actions.activateAttack();
     return 'stopAttack';
   }
